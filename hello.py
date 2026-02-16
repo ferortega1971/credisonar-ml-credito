@@ -275,13 +275,14 @@ st.markdown("---")
 # ========== SECCIÓN 1: DATOS DEL CLIENTE ==========
 st.header("👤 1. Datos del Cliente")
 
-col1, col2 = st.columns([2, 1])
+col1, col2 = st.columns([4, 1])
 
 with col1:
     cedula = st.text_input("Cédula *", placeholder="Ingrese el número de cédula", key="cedula_input")
 
 with col2:
-    buscar_btn = st.button("🔍 Buscar Cliente", type="primary", use_container_width=True)
+    st.write("")  # Spacer for alignment
+    buscar_btn = st.button("🔍 Buscar", type="primary")
 
 if buscar_btn and cedula:
     with st.spinner("Buscando cliente..."):
@@ -397,54 +398,105 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     st.header("📊 2. Información Financiera Actual")
     st.markdown("*Datos al día de hoy*")
 
-    col_f1, col_f2 = st.columns(2)
+    # Ingresos
+    st.subheader("💰 Ingresos")
+    sueldo_mensual = st.number_input(
+        "Ingresos Mensuales Demostrables *",
+        min_value=0,
+        max_value=100000000,
+        value=2000000,
+        step=100000,
+        help="Ingreso mensual total demostrable del cliente"
+    )
 
-    with col_f1:
-        st.subheader("💼 Ingresos y Egresos")
-        sueldo_mensual = st.number_input(
-            "Sueldo Mensual Actual *",
+    # Egresos
+    st.subheader("💸 Egresos")
+    col_e1, col_e2, col_e3 = st.columns(3)
+
+    with col_e1:
+        arriendo = st.number_input(
+            "Arriendo *",
             min_value=0,
-            max_value=100000000,
-            value=2000000,
-            step=100000,
-            help="Ingreso mensual total del cliente"
+            max_value=50000000,
+            value=500000,
+            step=50000,
+            help="Valor mensual del arriendo"
         )
 
-        total_egresos = st.number_input(
-            "Egresos Mensuales Fijos *",
+    with col_e2:
+        servicios = st.number_input(
+            "Servicios *",
             min_value=0,
-            max_value=100000000,
-            value=1000000,
-            step=100000,
-            help="Gastos fijos mensuales (arriendo, servicios, alimentación, etc.)"
+            max_value=10000000,
+            value=300000,
+            step=50000,
+            help="Valor mensual de servicios públicos"
         )
 
-    with col_f2:
-        st.subheader("📋 Datacrédito HOY")
+    with col_e3:
+        prestamos_personales = st.number_input(
+            "Préstamos Personales *",
+            min_value=0,
+            max_value=50000000,
+            value=200000,
+            step=50000,
+            help="Cuota mensual de préstamos personales (sin Datacrédito)"
+        )
+
+    # Datacrédito
+    st.subheader("📋 Datacrédito")
+    col_d1, col_d2, col_d3 = st.columns(3)
+
+    with col_d1:
         score_datacredito = st.number_input(
-            "Score Datacrédito Actual *",
+            "Score *",
             min_value=0,
             max_value=950,
             value=600,
             help="Score actual reportado en Datacrédito"
         )
 
+    with col_d2:
         total_deudas_datacredito = st.number_input(
-            "Total Deudas Vigentes *",
+            "Total Deudas *",
             min_value=0,
             max_value=500000000,
             value=0,
             step=100000,
-            help="Suma total de deudas vigentes reportadas"
+            help="Suma total de deudas vigentes reportadas en Datacrédito"
         )
 
+    with col_d3:
         valor_mensual_datacredito = st.number_input(
-            "Cuota Mensual Total (Deudas) *",
+            "Cuota Mensual *",
             min_value=0,
             max_value=50000000,
             value=0,
             step=50000,
-            help="Cuota mensual total que paga actualmente por todas sus deudas"
+            help="Cuota mensual total reportada en Datacrédito"
+        )
+
+    # Resumen
+    total_egresos = arriendo + servicios + prestamos_personales
+    total_egresos_completo = total_egresos + valor_mensual_datacredito
+
+    st.markdown("---")
+    st.subheader("📊 Resumen")
+    col_s1, col_s2, col_s3 = st.columns(3)
+
+    with col_s1:
+        st.metric("Total Ingresos", f"${sueldo_mensual:,.0f}")
+
+    with col_s2:
+        st.metric("Total Egresos", f"${total_egresos_completo:,.0f}")
+
+    with col_s3:
+        capacidad_disponible = sueldo_mensual - total_egresos_completo
+        st.metric(
+            "Capacidad Disponible",
+            f"${capacidad_disponible:,.0f}",
+            delta="Positiva" if capacidad_disponible > 0 else "Negativa",
+            delta_color="normal" if capacidad_disponible > 0 else "inverse"
         )
 
     # ========== SECCIÓN 3: INFORMACIÓN DEL NUEVO CRÉDITO ==========
