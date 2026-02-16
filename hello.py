@@ -137,7 +137,31 @@ def buscar_cliente(cedula):
             telefono = df_asesoria['tel_celular'].iloc[0] if pd.notna(df_asesoria['tel_celular'].iloc[0]) else ''
             direccion = df_asesoria['direccion_of'].iloc[0] if pd.notna(df_asesoria['direccion_of'].iloc[0]) else ''
 
+        # Créditos activos en Credisonar (estado = 'A')
+        query_activos = f"""
+        SELECT
+            COUNT(*) as creditos_vigentes,
+            SUM(saldo_capital) as saldo_capital_total,
+            SUM(valor_cuota) as cuota_mensual_total,
+            AVG(valor_desembolsado) as monto_promedio_aprobado,
+            MAX(valor_desembolsado) as monto_maximo_aprobado,
+            GROUP_CONCAT(DISTINCT calificacion) as calificaciones
+        FROM Cobranza_cartera
+        WHERE cedula_id = '{cedula}' AND estado = 'A'
+        """
+        df_activos = pd.read_sql(query_activos, conn)
+
         conn.close()
+
+        # Datos de créditos activos en Credisonar
+        creditos_activos = {
+            'creditos_vigentes': int(df_activos['creditos_vigentes'].iloc[0]) if df_activos['creditos_vigentes'].iloc[0] else 0,
+            'saldo_capital': float(df_activos['saldo_capital_total'].iloc[0]) if df_activos['saldo_capital_total'].iloc[0] else 0,
+            'cuota_mensual': float(df_activos['cuota_mensual_total'].iloc[0]) if df_activos['cuota_mensual_total'].iloc[0] else 0,
+            'monto_aprobado': float(df_activos['monto_maximo_aprobado'].iloc[0]) if df_activos['monto_maximo_aprobado'].iloc[0] else 0,
+            'calificaciones': df_activos['calificaciones'].iloc[0] if pd.notna(df_activos['calificaciones'].iloc[0]) else '',
+            'tiene_calificacion_E': 'E' in str(df_activos['calificaciones'].iloc[0]) if pd.notna(df_activos['calificaciones'].iloc[0]) else False
+        }
 
         # Construir diccionario completo
         cliente = {
@@ -150,6 +174,7 @@ def buscar_cliente(cedula):
             'sexo_texto': df_cliente['sexo'].iloc[0],
             'estado_civil': estado_civil,
             'estado_civil_texto': df_cliente['estado_civil'].iloc[0],
+            'creditos_activos': creditos_activos,
         }
 
         # Historial de créditos
@@ -212,6 +237,16 @@ def buscar_cliente(cedula):
                 'monto_total_pagado': 0,
                 'promedio_valor_pago': 0,
             }
+            # Si no hay historial, asegurar que creditos_activos esté inicializado
+            if 'creditos_activos' not in cliente:
+                cliente['creditos_activos'] = {
+                    'creditos_vigentes': 0,
+                    'saldo_capital': 0,
+                    'cuota_mensual': 0,
+                    'monto_aprobado': 0,
+                    'calificaciones': '',
+                    'tiene_calificacion_E': False
+                }
 
         return cliente
 
@@ -365,6 +400,14 @@ elif 'cliente' in st.session_state and st.session_state['cliente'] is None:
             'sexo_texto': sexo_nuevo[0],
             'estado_civil': estado_civil_map[estado_civil_nuevo],
             'estado_civil_texto': estado_civil_nuevo[0],
+            'creditos_activos': {
+                'creditos_vigentes': 0,
+                'saldo_capital': 0,
+                'cuota_mensual': 0,
+                'monto_aprobado': 0,
+                'calificaciones': '',
+                'tiene_calificacion_E': False
+            },
             'historial': {
                 'vivienda_propia_num': 0,
                 'num_prestamos_historicos': 0,
@@ -476,9 +519,44 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             help="Cuota mensual total reportada en Datacrédito"
         )
 
+    # Credisonar - Datos automáticos de la BD
+    st.subheader("🏦 Credisonar")
+
+    # Obtener datos de créditos activos
+    cliente = st.session_state['cliente']
+    creditos_activos = cliente.get('creditos_activos', {})
+
+    # VALIDACIÓN CRÍTICA: Si tiene calificación E, bloquear
+    if creditos_activos.get('tiene_calificacion_E', False):
+        st.error("🚨 **¡CLIENTE BLOQUEADO!** - NO PUEDE SOLICITAR OTRO CRÉDITO")
+        st.error(f"**Motivo:** Tiene crédito(s) con calificación E (Muy Mala) en Credisonar")
+        st.warning("El cliente debe regularizar sus créditos actuales antes de solicitar uno nuevo.")
+        st.stop()  # Bloquear el resto de la aplicación
+
+    col_c1, col_c2, col_c3, col_c4, col_c5 = st.columns(5)
+
+    with col_c1:
+        st.metric("Créditos Vigentes", creditos_activos.get('creditos_vigentes', 0))
+
+    with col_c2:
+        st.metric("Saldo Capital", f"${creditos_activos.get('saldo_capital', 0):,.0f}")
+
+    with col_c3:
+        calificaciones = creditos_activos.get('calificaciones', 'N/A')
+        if calificaciones == '':
+            calificaciones = 'N/A'
+        st.metric("Calificación", calificaciones)
+
+    with col_c4:
+        st.metric("Monto Aprobado", f"${creditos_activos.get('monto_aprobado', 0):,.0f}")
+
+    with col_c5:
+        cuota_mensual_credisonar = creditos_activos.get('cuota_mensual', 0)
+        st.metric("Cuota Mensual", f"${cuota_mensual_credisonar:,.0f}")
+
     # Resumen
     total_egresos = arriendo + servicios + prestamos_personales
-    total_egresos_completo = total_egresos + valor_mensual_datacredito
+    total_egresos_completo = total_egresos + valor_mensual_datacredito + cuota_mensual_credisonar
 
     st.markdown("---")
     st.subheader("📊 Resumen")
