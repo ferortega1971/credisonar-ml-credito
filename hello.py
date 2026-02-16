@@ -9,6 +9,14 @@ import numpy as np
 import pickle
 import pymysql
 from pathlib import Path
+from datetime import datetime
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 # Configuración de rutas (relativas para Streamlit Cloud)
 BASE_DIR = Path(__file__).parent
@@ -292,6 +300,118 @@ def calcular_monto_sugerido(probabilidad, monto_solicitado, plazo, sueldo_mensua
 
     return max(0, int(monto_sugerido))
 
+def generar_pdf(cliente, datos_financieros, resultado_evaluacion):
+    """Genera un PDF con el resultado de la evaluación de crédito"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Estilo personalizado para título
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.HexColor('#FF4B4B'),
+        spaceAfter=30,
+        alignment=TA_CENTER
+    )
+
+    # Fecha y hora de generación
+    fecha_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    # Título
+    elements.append(Paragraph("EVALUACIÓN DE CRÉDITO - CREDISONAR", title_style))
+    elements.append(Paragraph(f"Fecha de generación: {fecha_hora}", styles['Normal']))
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Datos del cliente
+    elements.append(Paragraph("DATOS DEL CLIENTE", styles['Heading2']))
+    cliente_data = [
+        ['Cédula:', cliente['cedula']],
+        ['Nombre:', cliente['nombre']],
+        ['Teléfono:', cliente['telefono']],
+        ['Dirección:', cliente['direccion']]
+    ]
+    cliente_table = Table(cliente_data, colWidths=[2*inch, 4*inch])
+    cliente_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(cliente_table)
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Información financiera
+    elements.append(Paragraph("INFORMACIÓN FINANCIERA", styles['Heading2']))
+    financiera_data = [
+        ['Concepto', 'Valor'],
+        ['Ingresos Mensuales', f"${datos_financieros['ingresos']:,.0f}"],
+        ['Arriendo', f"${datos_financieros['arriendo']:,.0f}"],
+        ['Servicios', f"${datos_financieros['servicios']:,.0f}"],
+        ['Préstamos Personales', f"${datos_financieros['prestamos_personales']:,.0f}"],
+        ['Score Datacrédito', f"{datos_financieros['score_datacredito']}"],
+        ['Deudas Datacrédito', f"${datos_financieros['total_deudas_datacredito']:,.0f}"],
+        ['Cuota Datacrédito', f"${datos_financieros['cuota_datacredito']:,.0f}"],
+        ['Cuota Credisonar', f"${datos_financieros['cuota_credisonar']:,.0f}"],
+        ['Total Egresos', f"${datos_financieros['total_egresos']:,.0f}"],
+        ['Capacidad Disponible', f"${datos_financieros['capacidad_disponible']:,.0f}"]
+    ]
+    financiera_table = Table(financiera_data, colWidths=[3*inch, 3*inch])
+    financiera_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(financiera_table)
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Resultado de la evaluación
+    elements.append(Paragraph("RESULTADO DE LA EVALUACIÓN", styles['Heading2']))
+
+    decision_color = colors.green if resultado_evaluacion['decision'] == 'APROBADO' else colors.red
+    decision_data = [
+        ['Decisión:', resultado_evaluacion['decision']],
+        ['Probabilidad Buen Pagador:', f"{resultado_evaluacion['probabilidad']}%"],
+        ['Monto Solicitado:', f"${resultado_evaluacion['monto_solicitado']:,.0f}"],
+        ['Monto Aprobado:', f"${resultado_evaluacion['monto_aprobado']:,.0f}"],
+        ['Plazo:', f"{resultado_evaluacion['plazo']} meses"],
+        ['Cuota Mensual:', f"${resultado_evaluacion['cuota_mensual']:,.0f}"],
+        ['Nivel de Riesgo:', resultado_evaluacion['nivel_riesgo']]
+    ]
+    decision_table = Table(decision_data, colWidths=[3*inch, 3*inch])
+    decision_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+        ('BACKGROUND', (1, 0), (1, 0), decision_color),
+        ('TEXTCOLOR', (1, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(decision_table)
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Recomendación
+    elements.append(Paragraph("RECOMENDACIÓN", styles['Heading2']))
+    recomendacion = Paragraph(resultado_evaluacion['recomendacion'], styles['Normal'])
+    elements.append(recomendacion)
+
+    # Construir PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
 # Configuración de la aplicación
 st.set_page_config(page_title="Sistema de Decisión de Crédito", page_icon="💰", layout="wide")
 
@@ -447,7 +567,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         "Ingresos Mensuales Demostrables *",
         min_value=0,
         max_value=100000000,
-        value=2000000,
+        value=0,
         step=100000,
         help="Ingreso mensual total demostrable del cliente"
     )
@@ -461,7 +581,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             "Arriendo *",
             min_value=0,
             max_value=50000000,
-            value=500000,
+            value=0,
             step=50000,
             help="Valor mensual del arriendo"
         )
@@ -471,7 +591,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             "Servicios *",
             min_value=0,
             max_value=10000000,
-            value=300000,
+            value=0,
             step=50000,
             help="Valor mensual de servicios públicos"
         )
@@ -481,7 +601,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             "Préstamos Personales *",
             min_value=0,
             max_value=50000000,
-            value=200000,
+            value=0,
             step=50000,
             help="Cuota mensual de préstamos personales (sin Datacrédito)"
         )
@@ -495,7 +615,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             "Score *",
             min_value=0,
             max_value=950,
-            value=600,
+            value=0,
             help="Score actual reportado en Datacrédito"
         )
 
@@ -603,7 +723,20 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
 
     # ========== BOTÓN DE EVALUACIÓN ==========
     st.markdown("---")
-    evaluar_btn = st.button("🔮 EVALUAR SOLICITUD", type="primary", use_container_width=True)
+
+    # Validar campos obligatorios
+    campos_vacios = []
+    if sueldo_mensual == 0:
+        campos_vacios.append("Ingresos Mensuales Demostrables")
+    if score_datacredito == 0:
+        campos_vacios.append("Score Datacrédito")
+    if monto_solicitado == 0:
+        campos_vacios.append("Monto Solicitado")
+
+    if campos_vacios:
+        st.warning(f"⚠️ Por favor complete los siguientes campos obligatorios: {', '.join(campos_vacios)}")
+
+    evaluar_btn = st.button("🔮 EVALUAR SOLICITUD", type="primary", use_container_width=True, disabled=len(campos_vacios) > 0)
 
     if evaluar_btn:
         with st.spinner("Analizando solicitud..."):
@@ -890,6 +1023,47 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                         st.write(f"- Préstamos históricos: {cliente['historial']['num_prestamos_historicos']}")
                         st.write(f"- Tasa cancelación: {cliente['historial']['ratio_cancelacion']*100:.0f}%")
                         st.write(f"- Mora máxima: {cliente['historial']['dias_mora_maximo']:.0f} días")
+
+            # Guardar resultados en session_state para PDF
+            st.session_state['resultado_evaluacion'] = {
+                'decision': 'APROBADO' if decision == 1 and not rechazo_automatico else 'RECHAZADO',
+                'probabilidad': round(probabilidad * 100, 1),
+                'monto_solicitado': monto_solicitado,
+                'monto_aprobado': monto_sugerido,
+                'plazo': plazo,
+                'cuota_mensual': cuota_sugerido,
+                'nivel_riesgo': nivel_riesgo if not rechazo_automatico else 'CRÍTICO',
+                'recomendacion': f"Cliente {'APROBADO' if decision == 1 and not rechazo_automatico else 'RECHAZADO'} con nivel de riesgo {nivel_riesgo if not rechazo_automatico else 'CRÍTICO'}. Ratio deuda/ingreso: {ratio_deuda_ingreso:.1f}%"
+            }
+            st.session_state['datos_financieros'] = {
+                'ingresos': sueldo_mensual,
+                'arriendo': arriendo,
+                'servicios': servicios,
+                'prestamos_personales': prestamos_personales,
+                'score_datacredito': score_datacredito,
+                'total_deudas_datacredito': total_deudas_datacredito,
+                'cuota_datacredito': valor_mensual_datacredito,
+                'cuota_credisonar': cuota_mensual_credisonar,
+                'total_egresos': total_egresos_completo,
+                'capacidad_disponible': capacidad_disponible
+            }
+
+            # Botón para generar PDF
+            st.markdown("---")
+            if st.button("📄 GENERAR PDF", type="secondary", use_container_width=True):
+                pdf_buffer = generar_pdf(
+                    cliente,
+                    st.session_state['datos_financieros'],
+                    st.session_state['resultado_evaluacion']
+                )
+                fecha_nombre = datetime.now().strftime("%Y%m%d_%H%M%S")
+                st.download_button(
+                    label="⬇️ Descargar PDF",
+                    data=pdf_buffer,
+                    file_name=f"Evaluacion_Credito_{cliente['cedula']}_{fecha_nombre}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
 
 else:
     st.info("👆 Por favor ingrese una cédula y busque el cliente para comenzar la evaluación.")

@@ -12,3 +12,6 @@ plotly==5.18.0
 
 # Database
 pymysql==1.1.0
+
+# PDF Generation
+reportlab==4.0.7
