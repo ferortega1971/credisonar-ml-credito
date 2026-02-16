@@ -1,0 +1,4 @@
+Mejor Modelo: Gradient Boosting
+Fecha: 2026-02-16 14:53:50.338603
+Dataset: c:\Desarrollos\projectos2026\proyecto1ML\data\dataset_ml_v2.csv
+Features: 33

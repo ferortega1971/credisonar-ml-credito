@@ -1,0 +1,85 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.local
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (comentar si quieres versionar los datos)
+data/raw/*.csv
+data/raw/*.xlsx
+data/processed/*.csv
+data/processed/*.pkl
+
+# Models (archivos grandes) - pero necesitamos algunos para Streamlit Cloud
+# models/*.pkl  # COMENTADO: necesitamos best_model_v2.pkl, scaler_v2.pkl, feature_names_v2.pkl
+models/*.h5
+models/*.joblib
+# Excluir modelos experimentales grandes
+models/*_real.pkl
+models/*_test.pkl
+models/*_backup.pkl
+
+# Logs
+logs/
+*.log
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Test coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp

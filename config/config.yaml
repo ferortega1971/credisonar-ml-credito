@@ -1,0 +1,90 @@
+# Configuración del Sistema de Credit Scoring - Credisonar
+
+model:
+  name: "credit_scoring_v1"
+  type: "xgboost"
+  threshold: 0.5
+
+  # Parámetros XGBoost
+  xgboost_params:
+    n_estimators: 100
+    max_depth: 6
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    random_state: 42
+
+  # Features a utilizar
+  features:
+    demographic:
+      - edad
+      - genero
+      - estado_civil
+      - nivel_educacion
+      - ocupacion
+      - antiguedad_trabajo_meses
+
+    financial:
+      - ingreso_mensual
+      - monto_solicitado
+      - plazo_meses
+      - ratio_deuda_ingreso
+
+    credit_history:
+      - prestamos_anteriores
+      - prestamos_pagados_completos
+      - dias_atraso_promedio
+      - max_dias_atraso
+      - pagos_puntuales_pct
+
+    behavior:
+      - antiguedad_cliente_meses
+      - consultas_credito_ultimos_6m
+
+scoring:
+  min_score: 300
+  max_score: 850
+
+  # Rangos de decisión
+  thresholds:
+    rechazar: 500  # Score menor a este = RECHAZAR
+    revisar: 650   # Entre 500-650 = REVISAR MANUAL
+    aprobar: 650   # Mayor a 650 = APROBAR
+
+  # Tasas de interés según score
+  tasas:
+    - score_min: 300
+      score_max: 500
+      tasa: 0.0  # No se aprueba
+    - score_min: 500
+      score_max: 600
+      tasa: 28.0
+    - score_min: 600
+      score_max: 700
+      tasa: 22.0
+    - score_min: 700
+      score_max: 800
+      tasa: 18.0
+    - score_min: 800
+      score_max: 850
+      tasa: 15.0
+
+data:
+  raw_path: "data/raw"
+  processed_path: "data/processed"
+  test_size: 0.2
+  random_state: 42
+
+  # Balance de clases
+  balance_method: "SMOTE"  # SMOTE, ADASYN, RandomOverSampler
+
+api:
+  title: "Credisonar Credit Scoring API"
+  version: "1.0.0"
+  description: "API para evaluación de riesgo crediticio"
+
+ui:
+  title: "Sistema de Evaluación Crediticia"
+  company_name: "Credisonar"
+  logo_url: null
+  primary_color: "#1E88E5"
