@@ -413,7 +413,7 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion):
     return buffer
 
 # Configuración de la aplicación
-st.set_page_config(page_title="Sistema de Decisión de Crédito", page_icon="💰", layout="wide")
+st.set_page_config(page_title="Sistema de Decisión de Crédito", page_icon="💰", layout="centered")
 
 st.title("💰 Sistema de Decisión de Crédito - Credisonar")
 st.markdown("**Evaluación inteligente con Machine Learning**")
@@ -1024,8 +1024,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                         st.write(f"- Tasa cancelación: {cliente['historial']['ratio_cancelacion']*100:.0f}%")
                         st.write(f"- Mora máxima: {cliente['historial']['dias_mora_maximo']:.0f} días")
 
-            # Guardar resultados en session_state para PDF
-            st.session_state['resultado_evaluacion'] = {
+            # Preparar datos para PDF
+            resultado_evaluacion = {
                 'decision': 'APROBADO' if decision == 1 and not rechazo_automatico else 'RECHAZADO',
                 'probabilidad': round(probabilidad * 100, 1),
                 'monto_solicitado': monto_solicitado,
@@ -1035,7 +1035,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 'nivel_riesgo': nivel_riesgo if not rechazo_automatico else 'CRÍTICO',
                 'recomendacion': f"Cliente {'APROBADO' if decision == 1 and not rechazo_automatico else 'RECHAZADO'} con nivel de riesgo {nivel_riesgo if not rechazo_automatico else 'CRÍTICO'}. Ratio deuda/ingreso: {ratio_deuda_ingreso:.1f}%"
             }
-            st.session_state['datos_financieros'] = {
+            datos_financieros = {
                 'ingresos': sueldo_mensual,
                 'arriendo': arriendo,
                 'servicios': servicios,
@@ -1048,22 +1048,20 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 'capacidad_disponible': capacidad_disponible
             }
 
-            # Botón para generar PDF
+            # Generar PDF automáticamente
             st.markdown("---")
-            if st.button("📄 GENERAR PDF", type="secondary", use_container_width=True):
-                pdf_buffer = generar_pdf(
-                    cliente,
-                    st.session_state['datos_financieros'],
-                    st.session_state['resultado_evaluacion']
-                )
-                fecha_nombre = datetime.now().strftime("%Y%m%d_%H%M%S")
-                st.download_button(
-                    label="⬇️ Descargar PDF",
-                    data=pdf_buffer,
-                    file_name=f"Evaluacion_Credito_{cliente['cedula']}_{fecha_nombre}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
+            st.subheader("📄 Descargar Evaluación")
+            pdf_buffer = generar_pdf(cliente, datos_financieros, resultado_evaluacion)
+            fecha_nombre = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            st.download_button(
+                label="⬇️ Descargar PDF de la Evaluación",
+                data=pdf_buffer,
+                file_name=f"Evaluacion_Credito_{cliente['cedula']}_{fecha_nombre}.pdf",
+                mime="application/pdf",
+                type="primary",
+                use_container_width=True
+            )
 
 else:
     st.info("👆 Por favor ingrese una cédula y busque el cliente para comenzar la evaluación.")
