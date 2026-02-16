@@ -3,104 +3,30 @@ Aplicación Web de Predicción de Crédito V3
 Interfaz reorganizada con flujo lógico: Cliente → Info Actual → Crédito → Resultado
 """
 
-import sys
-import traceback
+import streamlit as st
+import pandas as pd
+import numpy as np
+import pickle
+import pymysql
 from pathlib import Path
 
-# Debug: Log inicio de la aplicación
-print("="*50, file=sys.stderr)
-print("INICIANDO APLICACIÓN DE CRÉDITO ML", file=sys.stderr)
-print("="*50, file=sys.stderr)
-
-try:
-    import streamlit as st
-    print("✓ streamlit importado", file=sys.stderr)
-except Exception as e:
-    print(f"✗ Error importando streamlit: {e}", file=sys.stderr)
-    raise
-
-try:
-    import pandas as pd
-    print("✓ pandas importado", file=sys.stderr)
-except Exception as e:
-    print(f"✗ Error importando pandas: {e}", file=sys.stderr)
-    raise
-
-try:
-    import numpy as np
-    print("✓ numpy importado", file=sys.stderr)
-except Exception as e:
-    print(f"✗ Error importando numpy: {e}", file=sys.stderr)
-    raise
-
-try:
-    import pickle
-    print("✓ pickle importado", file=sys.stderr)
-except Exception as e:
-    print(f"✗ Error importando pickle: {e}", file=sys.stderr)
-    raise
-
-try:
-    import pymysql
-    print("✓ pymysql importado", file=sys.stderr)
-except Exception as e:
-    print(f"✗ Error importando pymysql: {e}", file=sys.stderr)
-    raise
-
-import os
-
 # Configuración de rutas (relativas para Streamlit Cloud)
-print(f"Directorio actual: {os.getcwd()}", file=sys.stderr)
 BASE_DIR = Path(__file__).parent
-print(f"BASE_DIR: {BASE_DIR}", file=sys.stderr)
 MODEL_FILE = BASE_DIR / "models" / "best_model_v2.pkl"
 SCALER_FILE = BASE_DIR / "models" / "scaler_v2.pkl"
 FEATURE_NAMES_FILE = BASE_DIR / "models" / "feature_names_v2.pkl"
-
-# Verificar que los archivos existen
-print(f"Verificando archivos del modelo:", file=sys.stderr)
-print(f"  - best_model_v2.pkl existe: {MODEL_FILE.exists()}", file=sys.stderr)
-print(f"  - scaler_v2.pkl existe: {SCALER_FILE.exists()}", file=sys.stderr)
-print(f"  - feature_names_v2.pkl existe: {FEATURE_NAMES_FILE.exists()}", file=sys.stderr)
 
 # Cargar modelo
 @st.cache_resource
 def cargar_modelo():
     """Carga el modelo, scaler y feature names"""
-    try:
-        print(f"Intentando cargar modelo desde: {MODEL_FILE}", file=sys.stderr)
-        if not MODEL_FILE.exists():
-            raise FileNotFoundError(f"No se encontró el archivo del modelo: {MODEL_FILE}")
-
-        with open(MODEL_FILE, 'rb') as f:
-            modelo = pickle.load(f)
-        print("✓ Modelo cargado exitosamente", file=sys.stderr)
-
-        print(f"Intentando cargar scaler desde: {SCALER_FILE}", file=sys.stderr)
-        if not SCALER_FILE.exists():
-            raise FileNotFoundError(f"No se encontró el archivo del scaler: {SCALER_FILE}")
-
-        with open(SCALER_FILE, 'rb') as f:
-            scaler = pickle.load(f)
-        print("✓ Scaler cargado exitosamente", file=sys.stderr)
-
-        print(f"Intentando cargar feature names desde: {FEATURE_NAMES_FILE}", file=sys.stderr)
-        if not FEATURE_NAMES_FILE.exists():
-            raise FileNotFoundError(f"No se encontró el archivo de feature names: {FEATURE_NAMES_FILE}")
-
-        with open(FEATURE_NAMES_FILE, 'rb') as f:
-            feature_names = pickle.load(f)
-        print("✓ Feature names cargados exitosamente", file=sys.stderr)
-        print(f"  Total features: {len(feature_names)}", file=sys.stderr)
-
-        return modelo, scaler, feature_names
-    except Exception as e:
-        print(f"✗ ERROR CARGANDO MODELO:", file=sys.stderr)
-        print(f"  Tipo de error: {type(e).__name__}", file=sys.stderr)
-        print(f"  Mensaje: {str(e)}", file=sys.stderr)
-        print(f"  Traceback:", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        raise
+    with open(MODEL_FILE, 'rb') as f:
+        modelo = pickle.load(f)
+    with open(SCALER_FILE, 'rb') as f:
+        scaler = pickle.load(f)
+    with open(FEATURE_NAMES_FILE, 'rb') as f:
+        feature_names = pickle.load(f)
+    return modelo, scaler, feature_names
 
 def conectar_bd():
     """Conecta a la base de datos MySQL (local o Streamlit Cloud)"""
@@ -315,32 +241,16 @@ def calcular_monto_sugerido(probabilidad, monto_solicitado, plazo, sueldo_mensua
 
 # Interfaz Streamlit
 def main():
-    print("Iniciando función main()", file=sys.stderr)
-
-    try:
-        st.set_page_config(page_title="Sistema de Decisión de Crédito", page_icon="💰", layout="wide")
-        print("✓ Configuración de página establecida", file=sys.stderr)
-    except Exception as e:
-        print(f"✗ Error en set_page_config: {e}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        raise
+    st.set_page_config(page_title="Sistema de Decisión de Crédito", page_icon="💰", layout="wide")
 
     st.title("💰 Sistema de Decisión de Crédito - Credisonar")
     st.markdown("**Evaluación inteligente con Machine Learning**")
-    print("✓ Título y markdown renderizados", file=sys.stderr)
 
     # Cargar modelo
     try:
-        print("Intentando cargar modelo, scaler y feature names...", file=sys.stderr)
         modelo, scaler, feature_names = cargar_modelo()
-        print("✓ Modelo, scaler y feature names cargados correctamente", file=sys.stderr)
     except Exception as e:
-        print(f"✗ ERROR en cargar_modelo():", file=sys.stderr)
-        print(f"  Tipo: {type(e).__name__}", file=sys.stderr)
-        print(f"  Mensaje: {str(e)}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
         st.error(f"❌ Error cargando el modelo: {e}")
-        st.error(f"Tipo de error: {type(e).__name__}")
         st.stop()
         return
 
@@ -838,18 +748,6 @@ def main():
     else:
         st.info("👆 Por favor ingrese una cédula y busque el cliente para comenzar la evaluación.")
 
-    print("✓ Función main() completada exitosamente", file=sys.stderr)
-
 # IMPORTANTE: En Streamlit Cloud, el código debe ejecutarse directamente
 # NO dentro de if __name__ == "__main__": porque Streamlit no lo ejecuta
-try:
-    print("Ejecutando main()...", file=sys.stderr)
-    main()
-    print("✓ App inicializada correctamente", file=sys.stderr)
-except Exception as e:
-    print(f"✗ ERROR FATAL EN MAIN:", file=sys.stderr)
-    print(f"  Tipo: {type(e).__name__}", file=sys.stderr)
-    print(f"  Mensaje: {str(e)}", file=sys.stderr)
-    print(f"  Traceback completo:", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-    raise
+main()
