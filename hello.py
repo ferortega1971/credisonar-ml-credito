@@ -55,19 +55,30 @@ def conectar_bd():
 
 def buscar_cliente(cedula):
     """Busca datos del cliente en la BD"""
-    conn = conectar_bd()
+    try:
+        conn = conectar_bd()
 
-    # Datos básicos del cliente
-    query_cliente = f"SELECT * FROM Cobranza_clientes WHERE cedula = '{cedula}'"
-    df_cliente = pd.read_sql(query_cliente, conn)
+        # Datos básicos del cliente
+        query_cliente = f"SELECT * FROM Cobranza_clientes WHERE cedula = '{cedula}'"
+        df_cliente = pd.read_sql(query_cliente, conn)
 
-    if len(df_cliente) == 0:
-        conn.close()
-        return None
+        if len(df_cliente) == 0:
+            conn.close()
+            return None
 
-    # Calcular edad
-    fecha_nac = pd.to_datetime(df_cliente['fecha_nacimiento'].iloc[0])
-    edad = (pd.Timestamp.now() - fecha_nac).days // 365
+        # Debug: mostrar primeras filas
+        st.write("DEBUG - Datos del cliente:", df_cliente.head())
+        st.write("DEBUG - Columnas:", df_cliente.columns.tolist())
+        st.write("DEBUG - Valor fecha_nacimiento:", df_cliente['fecha_nacimiento'].iloc[0])
+
+        # Calcular edad
+        fecha_nac = pd.to_datetime(df_cliente['fecha_nacimiento'].iloc[0], errors='coerce')
+        if pd.isna(fecha_nac):
+            st.error(f"Error: Fecha de nacimiento inválida para cliente {cedula}")
+            conn.close()
+            return None
+
+        edad = (pd.Timestamp.now() - fecha_nac).days // 365
     sexo = 1 if df_cliente['sexo'].iloc[0] == 'M' else 0
     estado_civil_map = {'S': 0, 'C': 1, 'V': 2, 'D': 3}
     estado_civil = estado_civil_map.get(df_cliente['estado_civil'].iloc[0], 0)
@@ -205,7 +216,17 @@ def buscar_cliente(cedula):
             'promedio_valor_pago': 0,
         }
 
-    return cliente
+        return cliente
+
+    except Exception as e:
+        st.error(f"❌ Error al buscar cliente: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+        try:
+            conn.close()
+        except:
+            pass
+        return None
 
 def predecir_credito(datos, modelo, scaler, feature_names):
     """Realiza la predicción"""
