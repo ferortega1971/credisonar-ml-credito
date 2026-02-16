@@ -67,8 +67,6 @@ def buscar_cliente(cedula):
 
         # Debug: mostrar primeras filas
         st.write("DEBUG - Datos del cliente:", df_cliente.head())
-        st.write("DEBUG - Columnas:", df_cliente.columns.tolist())
-        st.write("DEBUG - Valor fecha_nacimiento:", df_cliente['fecha_nacimiento'].iloc[0])
 
         # Calcular edad
         fecha_nac = pd.to_datetime(df_cliente['fecha_nacimiento'].iloc[0], errors='coerce')
