@@ -79,17 +79,17 @@ def buscar_cliente(cedula):
             return None
 
         edad = (pd.Timestamp.now() - fecha_nac).days // 365
-    sexo = 1 if df_cliente['sexo'].iloc[0] == 'M' else 0
-    estado_civil_map = {'S': 0, 'C': 1, 'V': 2, 'D': 3}
-    estado_civil = estado_civil_map.get(df_cliente['estado_civil'].iloc[0], 0)
+        sexo = 1 if df_cliente['sexo'].iloc[0] == 'M' else 0
+        estado_civil_map = {'S': 0, 'C': 1, 'V': 2, 'D': 3}
+        estado_civil = estado_civil_map.get(df_cliente['estado_civil'].iloc[0], 0)
 
-    # Datos de contacto
-    nombres = df_cliente['nombres'].iloc[0] if pd.notna(df_cliente['nombres'].iloc[0]) else ''
-    apellidos = df_cliente['apellidos'].iloc[0] if pd.notna(df_cliente['apellidos'].iloc[0]) else ''
-    nombre = f"{nombres} {apellidos}".strip()
+        # Datos de contacto
+        nombres = df_cliente['nombres'].iloc[0] if pd.notna(df_cliente['nombres'].iloc[0]) else ''
+        apellidos = df_cliente['apellidos'].iloc[0] if pd.notna(df_cliente['apellidos'].iloc[0]) else ''
+        nombre = f"{nombres} {apellidos}".strip()
 
-    # Datos de cartera (historial)
-    query_cartera = f"""
+        # Datos de cartera (historial)
+        query_cartera = f"""
     SELECT
         COUNT(*) as num_prestamos,
         SUM(CASE WHEN estado = 'C' THEN 1 ELSE 0 END) as cancelados,
@@ -109,112 +109,112 @@ def buscar_cliente(cedula):
     FROM Cobranza_cartera
     WHERE cedula_id = '{cedula}'
     """
-    df_cartera = pd.read_sql(query_cartera, conn)
+        df_cartera = pd.read_sql(query_cartera, conn)
 
-    # Datos de pagos
-    query_pagos = f"""
-    SELECT
-        COUNT(p.id) as total_pagos,
-        SUM(p.valor_pagado) as monto_total_pagado,
-        AVG(p.valor_pagado) as promedio_pago
-    FROM Cobranza_cartera car
-    LEFT JOIN Cobranza_pagos3 p ON car.pagare = p.pagare_id
-    WHERE car.cedula_id = '{cedula}'
-    """
-    df_pagos = pd.read_sql(query_pagos, conn)
+        # Datos de pagos
+        query_pagos = f"""
+        SELECT
+            COUNT(p.id) as total_pagos,
+            SUM(p.valor_pagado) as monto_total_pagado,
+            AVG(p.valor_pagado) as promedio_pago
+        FROM Cobranza_cartera car
+        LEFT JOIN Cobranza_pagos3 p ON car.pagare = p.pagare_id
+        WHERE car.cedula_id = '{cedula}'
+        """
+        df_pagos = pd.read_sql(query_pagos, conn)
 
-    # Última asesoría (para obtener contacto y vivienda)
-    query_asesoria = f"""
-    SELECT vivienda_propia, tel_celular, direccion_of
-    FROM Cobranza_asesorias
-    WHERE cedula_id = '{cedula}'
-    ORDER BY fecha_asesoria DESC
-    LIMIT 1
-    """
-    df_asesoria = pd.read_sql(query_asesoria, conn)
+        # Última asesoría (para obtener contacto y vivienda)
+        query_asesoria = f"""
+        SELECT vivienda_propia, tel_celular, direccion_of
+        FROM Cobranza_asesorias
+        WHERE cedula_id = '{cedula}'
+        ORDER BY fecha_asesoria DESC
+        LIMIT 1
+        """
+        df_asesoria = pd.read_sql(query_asesoria, conn)
 
-    # Obtener teléfono y dirección de asesoría si existe, sino dejar vacío
-    telefono = ''
-    direccion = ''
-    if len(df_asesoria) > 0:
-        telefono = df_asesoria['tel_celular'].iloc[0] if pd.notna(df_asesoria['tel_celular'].iloc[0]) else ''
-        direccion = df_asesoria['direccion_of'].iloc[0] if pd.notna(df_asesoria['direccion_of'].iloc[0]) else ''
+        # Obtener teléfono y dirección de asesoría si existe, sino dejar vacío
+        telefono = ''
+        direccion = ''
+        if len(df_asesoria) > 0:
+            telefono = df_asesoria['tel_celular'].iloc[0] if pd.notna(df_asesoria['tel_celular'].iloc[0]) else ''
+            direccion = df_asesoria['direccion_of'].iloc[0] if pd.notna(df_asesoria['direccion_of'].iloc[0]) else ''
 
-    conn.close()
+        conn.close()
 
-    # Construir diccionario completo
-    cliente = {
-        'cedula': cedula,
-        'nombre': nombre,
-        'telefono': telefono,
-        'direccion': direccion,
-        'edad': edad,
-        'sexo': sexo,
-        'sexo_texto': df_cliente['sexo'].iloc[0],
-        'estado_civil': estado_civil,
-        'estado_civil_texto': df_cliente['estado_civil'].iloc[0],
-    }
-
-    # Historial de créditos
-    if df_cartera['num_prestamos'].iloc[0] > 0:
-        num_prestamos = int(df_cartera['num_prestamos'].iloc[0])
-        fecha_primer = pd.to_datetime(df_cartera['fecha_primer_prestamo'].iloc[0])
-        fecha_ultimo = pd.to_datetime(df_cartera['fecha_ultimo_prestamo'].iloc[0])
-        antiguedad_meses = int((pd.Timestamp.now() - fecha_primer).days / 30)
-        meses_ultimo = int((pd.Timestamp.now() - fecha_ultimo).days / 30)
-
-        cliente['historial'] = {
-            'vivienda_propia_num': 1 if len(df_asesoria) > 0 and df_asesoria['vivienda_propia'].iloc[0] == 'S' else 0,
-            'num_prestamos_historicos': num_prestamos,
-            'prestamos_cancelados': int(df_cartera['cancelados'].iloc[0]),
-            'prestamos_activos': int(df_cartera['activos'].iloc[0]),
-            'monto_promedio_historico': float(df_cartera['monto_promedio'].iloc[0]),
-            'monto_maximo_historico': float(df_cartera['monto_maximo'].iloc[0]),
-            'monto_minimo_historico': float(df_cartera['monto_minimo'].iloc[0]),
-            'dias_mora_promedio': float(df_cartera['mora_promedio'].iloc[0]),
-            'dias_mora_maximo': float(df_cartera['mora_maximo'].iloc[0]),
-            'prestamos_calificacion_A': int(df_cartera['calif_A'].iloc[0]),
-            'prestamos_calificacion_B': int(df_cartera['calif_B'].iloc[0]),
-            'prestamos_calificacion_E': int(df_cartera['calif_E'].iloc[0]),
-            'prestamos_restructurados': int(df_cartera['restructurados'].iloc[0]),
-            'prestamos_en_juridica': int(df_cartera['juridica'].iloc[0]),
-            'antiguedad_cliente_meses': antiguedad_meses,
-            'meses_desde_ultimo_prestamo': meses_ultimo,
-            'ratio_prestamos_buenos': (int(df_cartera['calif_A'].iloc[0]) + int(df_cartera['calif_B'].iloc[0])) / num_prestamos,
-            'ratio_prestamos_malos': int(df_cartera['calif_E'].iloc[0]) / num_prestamos,
-            'ratio_cancelacion': int(df_cartera['cancelados'].iloc[0]) / num_prestamos,
-            'ratio_activos': int(df_cartera['activos'].iloc[0]) / num_prestamos,
-            'total_pagos_realizados': int(df_pagos['total_pagos'].iloc[0]) if df_pagos['total_pagos'].iloc[0] else 0,
-            'monto_total_pagado': float(df_pagos['monto_total_pagado'].iloc[0]) if df_pagos['monto_total_pagado'].iloc[0] else 0,
-            'promedio_valor_pago': float(df_pagos['promedio_pago'].iloc[0]) if df_pagos['promedio_pago'].iloc[0] else 0,
+        # Construir diccionario completo
+        cliente = {
+            'cedula': cedula,
+            'nombre': nombre,
+            'telefono': telefono,
+            'direccion': direccion,
+            'edad': edad,
+            'sexo': sexo,
+            'sexo_texto': df_cliente['sexo'].iloc[0],
+            'estado_civil': estado_civil,
+            'estado_civil_texto': df_cliente['estado_civil'].iloc[0],
         }
-    else:
-        # Cliente sin historial
-        cliente['historial'] = {
-            'vivienda_propia_num': 0,
-            'num_prestamos_historicos': 0,
-            'prestamos_cancelados': 0,
-            'prestamos_activos': 0,
-            'monto_promedio_historico': 0,
-            'monto_maximo_historico': 0,
-            'monto_minimo_historico': 0,
-            'dias_mora_promedio': 0,
-            'dias_mora_maximo': 0,
-            'prestamos_calificacion_A': 0,
-            'prestamos_calificacion_B': 0,
-            'prestamos_calificacion_E': 0,
-            'prestamos_restructurados': 0,
-            'prestamos_en_juridica': 0,
-            'antiguedad_cliente_meses': 0,
-            'meses_desde_ultimo_prestamo': 0,
-            'ratio_prestamos_buenos': 0,
-            'ratio_prestamos_malos': 0,
-            'ratio_cancelacion': 0,
-            'ratio_activos': 0,
-            'total_pagos_realizados': 0,
-            'monto_total_pagado': 0,
-            'promedio_valor_pago': 0,
-        }
+
+        # Historial de créditos
+        if df_cartera['num_prestamos'].iloc[0] > 0:
+            num_prestamos = int(df_cartera['num_prestamos'].iloc[0])
+            fecha_primer = pd.to_datetime(df_cartera['fecha_primer_prestamo'].iloc[0])
+            fecha_ultimo = pd.to_datetime(df_cartera['fecha_ultimo_prestamo'].iloc[0])
+            antiguedad_meses = int((pd.Timestamp.now() - fecha_primer).days / 30)
+            meses_ultimo = int((pd.Timestamp.now() - fecha_ultimo).days / 30)
+
+            cliente['historial'] = {
+                'vivienda_propia_num': 1 if len(df_asesoria) > 0 and df_asesoria['vivienda_propia'].iloc[0] == 'S' else 0,
+                'num_prestamos_historicos': num_prestamos,
+                'prestamos_cancelados': int(df_cartera['cancelados'].iloc[0]),
+                'prestamos_activos': int(df_cartera['activos'].iloc[0]),
+                'monto_promedio_historico': float(df_cartera['monto_promedio'].iloc[0]),
+                'monto_maximo_historico': float(df_cartera['monto_maximo'].iloc[0]),
+                'monto_minimo_historico': float(df_cartera['monto_minimo'].iloc[0]),
+                'dias_mora_promedio': float(df_cartera['mora_promedio'].iloc[0]),
+                'dias_mora_maximo': float(df_cartera['mora_maximo'].iloc[0]),
+                'prestamos_calificacion_A': int(df_cartera['calif_A'].iloc[0]),
+                'prestamos_calificacion_B': int(df_cartera['calif_B'].iloc[0]),
+                'prestamos_calificacion_E': int(df_cartera['calif_E'].iloc[0]),
+                'prestamos_restructurados': int(df_cartera['restructurados'].iloc[0]),
+                'prestamos_en_juridica': int(df_cartera['juridica'].iloc[0]),
+                'antiguedad_cliente_meses': antiguedad_meses,
+                'meses_desde_ultimo_prestamo': meses_ultimo,
+                'ratio_prestamos_buenos': (int(df_cartera['calif_A'].iloc[0]) + int(df_cartera['calif_B'].iloc[0])) / num_prestamos,
+                'ratio_prestamos_malos': int(df_cartera['calif_E'].iloc[0]) / num_prestamos,
+                'ratio_cancelacion': int(df_cartera['cancelados'].iloc[0]) / num_prestamos,
+                'ratio_activos': int(df_cartera['activos'].iloc[0]) / num_prestamos,
+                'total_pagos_realizados': int(df_pagos['total_pagos'].iloc[0]) if df_pagos['total_pagos'].iloc[0] else 0,
+                'monto_total_pagado': float(df_pagos['monto_total_pagado'].iloc[0]) if df_pagos['monto_total_pagado'].iloc[0] else 0,
+                'promedio_valor_pago': float(df_pagos['promedio_pago'].iloc[0]) if df_pagos['promedio_pago'].iloc[0] else 0,
+            }
+        else:
+            # Cliente sin historial
+            cliente['historial'] = {
+                'vivienda_propia_num': 0,
+                'num_prestamos_historicos': 0,
+                'prestamos_cancelados': 0,
+                'prestamos_activos': 0,
+                'monto_promedio_historico': 0,
+                'monto_maximo_historico': 0,
+                'monto_minimo_historico': 0,
+                'dias_mora_promedio': 0,
+                'dias_mora_maximo': 0,
+                'prestamos_calificacion_A': 0,
+                'prestamos_calificacion_B': 0,
+                'prestamos_calificacion_E': 0,
+                'prestamos_restructurados': 0,
+                'prestamos_en_juridica': 0,
+                'antiguedad_cliente_meses': 0,
+                'meses_desde_ultimo_prestamo': 0,
+                'ratio_prestamos_buenos': 0,
+                'ratio_prestamos_malos': 0,
+                'ratio_cancelacion': 0,
+                'ratio_activos': 0,
+                'total_pagos_realizados': 0,
+                'monto_total_pagado': 0,
+                'promedio_valor_pago': 0,
+            }
 
         return cliente
 
