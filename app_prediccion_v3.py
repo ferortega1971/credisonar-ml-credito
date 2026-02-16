@@ -840,15 +840,16 @@ def main():
 
     print("✓ Función main() completada exitosamente", file=sys.stderr)
 
-if __name__ == "__main__":
-    try:
-        print("Ejecutando main()...", file=sys.stderr)
-        main()
-        print("✓ App inicializada correctamente", file=sys.stderr)
-    except Exception as e:
-        print(f"✗ ERROR FATAL EN MAIN:", file=sys.stderr)
-        print(f"  Tipo: {type(e).__name__}", file=sys.stderr)
-        print(f"  Mensaje: {str(e)}", file=sys.stderr)
-        print(f"  Traceback completo:", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        raise
+# IMPORTANTE: En Streamlit Cloud, el código debe ejecutarse directamente
+# NO dentro de if __name__ == "__main__": porque Streamlit no lo ejecuta
+try:
+    print("Ejecutando main()...", file=sys.stderr)
+    main()
+    print("✓ App inicializada correctamente", file=sys.stderr)
+except Exception as e:
+    print(f"✗ ERROR FATAL EN MAIN:", file=sys.stderr)
+    print(f"  Tipo: {type(e).__name__}", file=sys.stderr)
+    print(f"  Mensaje: {str(e)}", file=sys.stderr)
+    print(f"  Traceback completo:", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    raise
