@@ -1,45 +1,14 @@
-# Core ML Libraries
+# Dependencias MÍNIMAS para Streamlit Cloud
+# Solo lo necesario para la app web
+
+# Core ML
 pandas==2.1.4
 numpy==1.26.3
 scikit-learn==1.4.0
-xgboost==2.0.3
-lightgbm==4.3.0
-imbalanced-learn==0.12.0
-
-# Model Explainability
-shap==0.44.1
-
-# API Framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
-python-jose[cryptography]==3.3.0
-python-multipart==0.0.6
 
 # UI Framework
 streamlit==1.30.0
 plotly==5.18.0
 
-# Database
-sqlalchemy==2.0.25
-psycopg2-binary==2.9.9
+# Database (solo MySQL)
 pymysql==1.1.0
-
-# Utilities
-python-dotenv==1.0.0
-joblib==1.3.2
-pyyaml==6.0.1
-
-# Data Visualization
-matplotlib==3.8.2
-seaborn==0.13.1
-
-# Monitoring
-mlflow==2.10.0
-
-# Development
-jupyter==1.0.0
-notebook==7.0.6
-ipykernel==6.29.0
-black==24.1.1
-pytest==7.4.4
