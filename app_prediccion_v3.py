@@ -34,7 +34,6 @@ def cargar_modelo():
 
 def conectar_bd():
     """Conecta a la base de datos MySQL (local o Streamlit Cloud)"""
-    # Intentar usar secrets de Streamlit Cloud primero
     try:
         mysql_config = st.secrets["mysql"]
         conn = pymysql.connect(
@@ -45,17 +44,18 @@ def conectar_bd():
             password=mysql_config["password"],
             cursorclass=pymysql.cursors.DictCursor
         )
-    except (FileNotFoundError, KeyError):
-        # Fallback para desarrollo local (usar .env o hardcode temporal)
-        conn = pymysql.connect(
-            host="92.204.216.38",
-            port=3306,
-            database="sigcrec10",
-            user="sigcrec_user",
-            password="Skidata2013*",
-            cursorclass=pymysql.cursors.DictCursor
-        )
-    return conn
+        return conn
+    except (FileNotFoundError, KeyError) as e:
+        st.error("""
+        ⚠️ **Error de configuración de base de datos**
+
+        No se encontraron las credenciales MySQL.
+
+        **Para desarrollo local:** Crea el archivo `.streamlit/secrets.toml` con las credenciales.
+        **Para Streamlit Cloud:** Configura los secrets en Settings > Secrets.
+        """)
+        st.stop()
+        return None
 
 def buscar_cliente(cedula):
     """Busca datos del cliente en la BD"""
