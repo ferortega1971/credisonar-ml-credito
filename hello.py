@@ -37,8 +37,7 @@ def conectar_bd():
             port=int(mysql_config.get("port", 3306)),
             database=mysql_config["database"],
             user=mysql_config["user"],
-            password=mysql_config["password"],
-            cursorclass=pymysql.cursors.DictCursor
+            password=mysql_config["password"]
         )
         return conn
     except (FileNotFoundError, KeyError) as e:
