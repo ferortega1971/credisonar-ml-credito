@@ -92,3 +92,4 @@ proyecto1ML/
 
 **Desarrollado con:** Python 3.13 | Streamlit | scikit-learn | pandas | MySQL
 **Año:** 2026
+
