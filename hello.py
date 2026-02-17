@@ -568,6 +568,12 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     if len(cliente['historial_prestamos']) > 0:
         # Formatear datos para mostrar
         df_display = cliente['historial_prestamos'].copy()
+
+        # Formatear pagaré como YYYY-#####
+        df_display['pagare'] = df_display['pagare'].apply(
+            lambda x: f"{str(x)[:4]}-{str(x)[4:]}" if len(str(x)) > 4 else str(x)
+        )
+
         df_display['fecha_desembolso'] = pd.to_datetime(df_display['fecha_desembolso']).dt.strftime('%d/%m/%Y')
         df_display['fecha_ultimo_pago'] = pd.to_datetime(df_display['fecha_ultimo_pago'], errors='coerce').dt.strftime('%d/%m/%Y')
         df_display['fecha_ultimo_pago'] = df_display['fecha_ultimo_pago'].fillna('N/A')
