@@ -169,12 +169,13 @@ def buscar_cliente(cedula):
             c.fecha_desembolso,
             MAX(p.fecha_pago) as fecha_ultimo_pago,
             c.valor_desembolsado as monto_aprobado,
+            c.valor_cuota,
             c.estado,
             c.calificacion
         FROM Cobranza_cartera c
         LEFT JOIN Cobranza_pagos3 p ON c.pagare = p.pagare_id
         WHERE c.cedula_id = '{cedula}'
-        GROUP BY c.pagare, c.fecha_desembolso, c.valor_desembolsado, c.estado, c.calificacion
+        GROUP BY c.pagare, c.fecha_desembolso, c.valor_desembolsado, c.valor_cuota, c.estado, c.calificacion
         ORDER BY c.fecha_desembolso DESC
         LIMIT 10
         """
@@ -578,6 +579,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         df_display['fecha_ultimo_pago'] = pd.to_datetime(df_display['fecha_ultimo_pago'], errors='coerce').dt.strftime('%d/%m/%Y')
         df_display['fecha_ultimo_pago'] = df_display['fecha_ultimo_pago'].fillna('N/A')
         df_display['monto_aprobado'] = df_display['monto_aprobado'].apply(lambda x: f"${x:,.0f}")
+        df_display['valor_cuota'] = df_display['valor_cuota'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "$0")
 
         # Renombrar columnas para mostrar
         df_display = df_display.rename(columns={
@@ -585,13 +587,14 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             'fecha_desembolso': 'Fecha Desembolso',
             'fecha_ultimo_pago': 'Último Pago',
             'monto_aprobado': 'Monto Aprobado',
+            'valor_cuota': 'Cuota',
             'estado': 'Estado',
             'calificacion': 'Calificación'
         })
 
         # Mostrar tabla
         st.dataframe(
-            df_display[['Pagaré', 'Fecha Desembolso', 'Último Pago', 'Monto Aprobado', 'Estado', 'Calificación']],
+            df_display[['Pagaré', 'Fecha Desembolso', 'Último Pago', 'Monto Aprobado', 'Cuota', 'Estado', 'Calificación']],
             use_container_width=True,
             hide_index=True
         )
