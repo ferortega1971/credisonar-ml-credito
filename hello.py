@@ -90,6 +90,9 @@ def buscar_cliente(cedula):
         apellidos = df_cliente['apellidos'].iloc[0] if pd.notna(df_cliente['apellidos'].iloc[0]) else ''
         nombre = f"{nombres} {apellidos}".strip()
 
+        # Obtener correo de Cobranza_clientes si existe
+        correo = df_cliente['correo'].iloc[0] if 'correo' in df_cliente.columns and pd.notna(df_cliente['correo'].iloc[0]) else ''
+
         # Datos de cartera (historial)
         query_cartera = f"""
     SELECT
@@ -127,7 +130,7 @@ def buscar_cliente(cedula):
 
         # Última asesoría (para obtener contacto y vivienda)
         query_asesoria = f"""
-        SELECT vivienda_propia, tel_celular, direccion_of, fecha_asesoria, correo
+        SELECT vivienda_propia, tel_celular, direccion_of, fecha_asesoria
         FROM Cobranza_asesorias
         WHERE cedula_id = '{cedula}'
         ORDER BY fecha_asesoria DESC
@@ -135,15 +138,13 @@ def buscar_cliente(cedula):
         """
         df_asesoria = pd.read_sql(query_asesoria, conn)
 
-        # Obtener teléfono, dirección, correo y fecha de asesoría si existe
+        # Obtener teléfono, dirección y fecha de asesoría si existe
         telefono = ''
         direccion = ''
-        correo = ''
         fecha_ultima_asesoria = None
         if len(df_asesoria) > 0:
             telefono = df_asesoria['tel_celular'].iloc[0] if pd.notna(df_asesoria['tel_celular'].iloc[0]) else ''
             direccion = df_asesoria['direccion_of'].iloc[0] if pd.notna(df_asesoria['direccion_of'].iloc[0]) else ''
-            correo = df_asesoria['correo'].iloc[0] if pd.notna(df_asesoria['correo'].iloc[0]) else ''
             if pd.notna(df_asesoria['fecha_asesoria'].iloc[0]):
                 fecha_ultima_asesoria = pd.to_datetime(df_asesoria['fecha_asesoria'].iloc[0])
 
