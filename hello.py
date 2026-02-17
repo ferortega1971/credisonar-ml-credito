@@ -495,7 +495,6 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
 
     # Título
     elements.append(Paragraph("EVALUACIÓN DE CRÉDITO - CREDISONAR", title_style))
-    elements.append(Paragraph(f"Fecha de generación: {fecha_hora}", styles['Normal']))
 
     # Consecutivo (si se proporciona)
     if consecutivo:
@@ -608,6 +607,17 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
         )
         concepto_texto = Paragraph(concepto_oficina, concepto_style)
         elements.append(concepto_texto)
+
+    # Fecha de generación al final del documento
+    elements.append(Spacer(1, 0.5*inch))
+    footer_style = ParagraphStyle(
+        'FooterStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=colors.grey,
+        alignment=TA_CENTER
+    )
+    elements.append(Paragraph(f"Fecha de generación: {fecha_hora}", footer_style))
 
     # Construir PDF
     doc.build(elements)
