@@ -1429,6 +1429,44 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 with st.expander("🔒 Información de Verificación"):
                     st.write(f"**Hash de verificación:** `{hash_pdf[:16]}...{hash_pdf[-16:]}`")
                     st.info("Este hash único garantiza la autenticidad del documento. Cualquier modificación al PDF generará un hash diferente.")
+
+                # Actualizar historial de PDFs después de guardar
+                st.markdown("---")
+                st.markdown("### 📄 Historial de Evaluaciones Actualizado")
+                df_pdfs_actualizado = obtener_historial_pdfs_cliente(cliente['cedula'])
+
+                if len(df_pdfs_actualizado) > 0:
+                    # Formatear datos para mostrar
+                    df_pdfs_display_act = df_pdfs_actualizado.copy()
+
+                    # Formatear fechas
+                    df_pdfs_display_act['fecha_generacion'] = pd.to_datetime(df_pdfs_display_act['fecha_generacion']).dt.strftime('%d/%m/%Y %H:%M')
+
+                    # Formatear montos
+                    df_pdfs_display_act['monto_solicitado'] = df_pdfs_display_act['monto_solicitado'].apply(lambda x: f"${x:,.0f}")
+                    df_pdfs_display_act['monto_aprobado'] = df_pdfs_display_act['monto_aprobado'].apply(lambda x: f"${x:,.0f}")
+                    df_pdfs_display_act['ingresos_reportados'] = df_pdfs_display_act['ingresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
+                    df_pdfs_display_act['egresos_reportados'] = df_pdfs_display_act['egresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
+
+                    # Renombrar columnas
+                    df_pdfs_display_act = df_pdfs_display_act.rename(columns={
+                        'consecutivo': 'Consecutivo',
+                        'fecha_generacion': 'Fecha',
+                        'decision': 'Resultado',
+                        'monto_solicitado': 'Monto Solicitado',
+                        'monto_aprobado': 'Monto Aprobado',
+                        'score_datacredito': 'Score DC',
+                        'ingresos_reportados': 'Ingresos',
+                        'egresos_reportados': 'Egresos'
+                    })
+
+                    # Mostrar tabla actualizada
+                    st.dataframe(
+                        df_pdfs_display_act[['Consecutivo', 'Fecha', 'Resultado', 'Monto Solicitado', 'Monto Aprobado', 'Score DC', 'Ingresos', 'Egresos']],
+                        use_container_width=True,
+                        hide_index=True
+                    )
+                    st.info(f"📋 Mostrando {len(df_pdfs_actualizado)} evaluación(es) reciente(s) incluyendo la que acabas de generar")
             else:
                 st.warning("⚠️ PDF generado pero no se pudo registrar en la base de datos.")
 
