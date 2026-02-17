@@ -16,7 +16,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 # Función de utilidad para formatear números con punto como separador de miles
@@ -29,6 +29,7 @@ BASE_DIR = Path(__file__).parent
 MODEL_FILE = BASE_DIR / "models" / "best_model_v2.pkl"
 SCALER_FILE = BASE_DIR / "models" / "scaler_v2.pkl"
 FEATURE_NAMES_FILE = BASE_DIR / "models" / "feature_names_v2.pkl"
+LOGO_FILE = BASE_DIR / "logo_credi.png"
 
 # Cargar modelo
 @st.cache_resource
@@ -482,6 +483,13 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
         alignment=TA_CENTER
     )
 
+    # Logo de Credisonar
+    if LOGO_FILE.exists():
+        logo = Image(str(LOGO_FILE), width=0.8*inch, height=0.8*inch)
+        logo.hAlign = 'CENTER'
+        elements.append(logo)
+        elements.append(Spacer(1, 0.2*inch))
+
     # Fecha y hora de generación
     fecha_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
@@ -662,8 +670,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("💰 Sistema de Decisión de Crédito - Credisonar")
-st.markdown("**Evaluación inteligente con Machine Learning**")
+# Header con logo
+col_logo, col_title = st.columns([1, 5])
+with col_logo:
+    if LOGO_FILE.exists():
+        st.image(str(LOGO_FILE), width=100)
+with col_title:
+    st.title("💰 Sistema de Decisión de Crédito - Credisonar")
+    st.markdown("**Evaluación inteligente con Machine Learning**")
 
 # Cargar modelo
 try:
