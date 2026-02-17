@@ -473,6 +473,21 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
     elements = []
     styles = getSampleStyleSheet()
 
+    # Fecha y hora de generación
+    fecha_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    # Función para agregar footer en cada página
+    def add_page_footer(canvas, doc):
+        """Agrega fecha en el footer de cada página"""
+        canvas.saveState()
+        # Configurar fuente y color
+        canvas.setFont('Helvetica', 9)
+        canvas.setFillColor(colors.grey)
+        # Dibujar fecha centrada en el footer (0.5 inch desde el fondo)
+        page_width = letter[0]
+        canvas.drawCentredString(page_width / 2.0, 0.5 * inch, f"Fecha de generación: {fecha_hora}")
+        canvas.restoreState()
+
     # Estilo personalizado para título
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -489,9 +504,6 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
         logo.hAlign = 'CENTER'
         elements.append(logo)
         elements.append(Spacer(1, 0.2*inch))
-
-    # Fecha y hora de generación
-    fecha_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     # Título
     elements.append(Paragraph("EVALUACIÓN DE CRÉDITO - CREDISONAR", title_style))
@@ -608,19 +620,8 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
         concepto_texto = Paragraph(concepto_oficina, concepto_style)
         elements.append(concepto_texto)
 
-    # Fecha de generación al final del documento
-    elements.append(Spacer(1, 0.5*inch))
-    footer_style = ParagraphStyle(
-        'FooterStyle',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.grey,
-        alignment=TA_CENTER
-    )
-    elements.append(Paragraph(f"Fecha de generación: {fecha_hora}", footer_style))
-
-    # Construir PDF
-    doc.build(elements)
+    # Construir PDF con footer en cada página
+    doc.build(elements, onFirstPage=add_page_footer, onLaterPages=add_page_footer)
     buffer.seek(0)
     return buffer
 
