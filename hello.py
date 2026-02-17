@@ -1048,7 +1048,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     with col_c1:
         monto_solicitado = st.number_input(
             "Monto Solicitado *",
-            min_value=100000,
+            min_value=500000,
             max_value=50000000,
             value=3000000,
             step=100000,
@@ -1059,7 +1059,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     with col_c2:
         plazo = st.selectbox(
             "Plazo (meses) *",
-            [6, 12, 18, 24, 36, 48],
+            [6, 12, 18, 24, 36],
             index=2,
             help="Plazo en meses para pagar el crédito",
             key=f"plazo_{cliente['cedula']}"
