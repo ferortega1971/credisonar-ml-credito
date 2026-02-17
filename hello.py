@@ -1481,6 +1481,23 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 use_container_width=True
             )
 
+            # Botones para nueva evaluación
+            st.markdown("---")
+            col_btn1, col_btn2 = st.columns(2)
+
+            with col_btn1:
+                if st.button("🔄 Nueva Evaluación (Mismo Cliente)", use_container_width=True, type="secondary"):
+                    # Limpiar formulario pero mantener el cliente
+                    st.session_state['cliente'] = buscar_cliente(cliente['cedula'])
+                    st.rerun()
+
+            with col_btn2:
+                if st.button("👤 Evaluar Otro Cliente", use_container_width=True, type="secondary"):
+                    # Limpiar todo completamente
+                    for key in list(st.session_state.keys()):
+                        del st.session_state[key]
+                    st.rerun()
+
 else:
     st.info("👆 Por favor ingrese una cédula y busque el cliente para comenzar la evaluación.")
 
