@@ -169,7 +169,7 @@ def buscar_cliente(cedula):
             c.fecha_desembolso,
             MAX(p.fecha_pago) as fecha_ultimo_pago,
             c.valor_desembolsado as monto_aprobado,
-            MAX(pc.valor) as valor_cuota,
+            MAX(pc.valor_a_pagar) as valor_cuota,
             c.estado,
             c.calificacion
         FROM Cobranza_cartera c
