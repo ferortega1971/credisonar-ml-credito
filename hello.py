@@ -415,6 +415,59 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion):
 # Configuración de la aplicación
 st.set_page_config(page_title="Sistema de Decisión de Crédito", page_icon="💰", layout="centered")
 
+# CSS personalizado para ampliar el contenedor y estandarizar textos
+st.markdown("""
+<style>
+    /* Ampliar el contenedor principal en 20% */
+    .main .block-container {
+        max-width: 1000px !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+
+    /* Estandarizar tamaños de texto */
+    h1 {
+        font-size: 2.2rem !important;
+        font-weight: 700 !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    h3 {
+        font-size: 1.2rem !important;
+        font-weight: 600 !important;
+        margin-top: 1rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* Estandarizar métricas */
+    [data-testid="stMetricValue"] {
+        font-size: 1.5rem !important;
+    }
+
+    [data-testid="stMetricLabel"] {
+        font-size: 0.9rem !important;
+    }
+
+    /* Espaciado consistente */
+    .stMarkdown p {
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Input labels más consistentes */
+    .stNumberInput label, .stTextInput label, .stSelectbox label {
+        font-size: 0.95rem !important;
+        font-weight: 500 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("💰 Sistema de Decisión de Crédito - Credisonar")
 st.markdown("**Evaluación inteligente con Machine Learning**")
 
@@ -559,10 +612,10 @@ elif 'cliente' in st.session_state and st.session_state['cliente'] is None:
 if 'cliente' in st.session_state and st.session_state['cliente']:
     st.markdown("---")
     st.header("📊 2. Información Financiera Actual")
-    st.markdown("*Datos al día de hoy*")
+    st.caption("Datos al día de hoy")
 
     # Ingresos
-    st.subheader("💰 Ingresos")
+    st.markdown("### 💰 Ingresos")
     sueldo_mensual = st.number_input(
         "Ingresos Mensuales Demostrables *",
         min_value=0,
@@ -573,7 +626,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     )
 
     # Egresos
-    st.subheader("💸 Egresos")
+    st.markdown("### 💸 Egresos")
     col_e1, col_e2, col_e3 = st.columns(3)
 
     with col_e1:
@@ -607,7 +660,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         )
 
     # Datacrédito
-    st.subheader("📋 Datacrédito")
+    st.markdown("### 📋 Datacrédito")
     col_d1, col_d2, col_d3 = st.columns(3)
 
     with col_d1:
@@ -640,7 +693,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         )
 
     # Credisonar - Datos automáticos de la BD
-    st.subheader("🏦 Credisonar")
+    st.markdown("### 🏦 Credisonar")
 
     # Obtener datos de créditos activos
     cliente = st.session_state['cliente']
@@ -679,7 +732,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     total_egresos_completo = total_egresos + valor_mensual_datacredito + cuota_mensual_credisonar
 
     st.markdown("---")
-    st.subheader("📊 Resumen")
+    st.markdown("### 📊 Resumen Financiero")
     col_s1, col_s2, col_s3 = st.columns(3)
 
     with col_s1:
@@ -1050,7 +1103,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
 
             # Generar PDF automáticamente
             st.markdown("---")
-            st.subheader("📄 Descargar Evaluación")
+            st.markdown("### 📄 Descargar Evaluación")
             pdf_buffer = generar_pdf(cliente, datos_financieros, resultado_evaluacion)
             fecha_nombre = datetime.now().strftime("%Y%m%d_%H%M%S")
 
