@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import pymysql
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from io import BytesIO
@@ -327,7 +328,100 @@ def calcular_monto_sugerido(probabilidad, monto_solicitado, plazo, sueldo_mensua
 
     return max(0, int(monto_sugerido))
 
-def generar_pdf(cliente, datos_financieros, resultado_evaluacion):
+def obtener_siguiente_consecutivo():
+    """
+    Obtiene el siguiente número de consecutivo para el PDF
+    Formato: YYYY-NNNNN (ej: 2026-00001)
+    """
+    try:
+        conn = conectar_bd()
+        cursor = conn.cursor()
+
+        # Obtener año actual
+        anio_actual = datetime.now().year
+
+        # Buscar el último consecutivo del año actual
+        query = f"""
+        SELECT consecutivo
+        FROM Cobranza_pdf_evaluaciones
+        WHERE consecutivo LIKE '{anio_actual}-%'
+        ORDER BY id DESC
+        LIMIT 1
+        """
+        cursor.execute(query)
+        resultado = cursor.fetchone()
+
+        if resultado:
+            # Extraer el número del consecutivo anterior
+            ultimo_consecutivo = resultado[0]
+            ultimo_numero = int(ultimo_consecutivo.split('-')[1])
+            nuevo_numero = ultimo_numero + 1
+        else:
+            # Primer consecutivo del año
+            nuevo_numero = 1
+
+        # Formatear como YYYY-NNNNN
+        consecutivo = f"{anio_actual}-{nuevo_numero:05d}"
+
+        cursor.close()
+        conn.close()
+
+        return consecutivo
+
+    except Exception as e:
+        st.error(f"Error al obtener consecutivo: {str(e)}")
+        # En caso de error, generar un consecutivo temporal
+        return f"{datetime.now().year}-TEMP{datetime.now().strftime('%H%M%S')}"
+
+def calcular_hash_pdf(pdf_bytes):
+    """
+    Calcula el hash SHA256 del contenido del PDF para verificación de autenticidad
+    """
+    return hashlib.sha256(pdf_bytes).hexdigest()
+
+def guardar_registro_pdf(consecutivo, cedula, nombre_cliente, decision, monto_solicitado,
+                         monto_aprobado, probabilidad, nivel_riesgo, hash_pdf, concepto_oficina=""):
+    """
+    Guarda el registro del PDF generado en la base de datos
+    """
+    try:
+        conn = conectar_bd()
+        cursor = conn.cursor()
+
+        query = """
+        INSERT INTO Cobranza_pdf_evaluaciones
+        (consecutivo, cedula, nombre_cliente, fecha_generacion, decision,
+         monto_solicitado, monto_aprobado, probabilidad, nivel_riesgo, concepto_oficina, hash_pdf)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
+        valores = (
+            consecutivo,
+            cedula,
+            nombre_cliente,
+            datetime.now(),
+            decision,
+            monto_solicitado,
+            monto_aprobado,
+            probabilidad,
+            nivel_riesgo,
+            concepto_oficina if concepto_oficina else None,
+            hash_pdf
+        )
+
+        cursor.execute(query, valores)
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return True
+
+    except Exception as e:
+        st.error(f"Error al guardar registro del PDF: {str(e)}")
+        return False
+
+def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo="", concepto_oficina=""):
     """Genera un PDF con el resultado de la evaluación de crédito"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -350,6 +444,20 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion):
     # Título
     elements.append(Paragraph("EVALUACIÓN DE CRÉDITO - CREDISONAR", title_style))
     elements.append(Paragraph(f"Fecha de generación: {fecha_hora}", styles['Normal']))
+
+    # Consecutivo (si se proporciona)
+    if consecutivo:
+        consecutivo_style = ParagraphStyle(
+            'ConsecutivoStyle',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#FF4B4B'),
+            spaceAfter=10,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        elements.append(Paragraph(f"<b>CONSECUTIVO: {consecutivo}</b>", consecutivo_style))
+
     elements.append(Spacer(1, 0.3*inch))
 
     # Datos del cliente
@@ -433,6 +541,21 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion):
     elements.append(Paragraph("RECOMENDACIÓN", styles['Heading2']))
     recomendacion = Paragraph(resultado_evaluacion['recomendacion'], styles['Normal'])
     elements.append(recomendacion)
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Concepto de la Oficina
+    if concepto_oficina:
+        elements.append(Paragraph("CONCEPTO DE LA OFICINA", styles['Heading2']))
+        concepto_style = ParagraphStyle(
+            'ConceptoStyle',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=10,
+            leftIndent=20,
+            rightIndent=20
+        )
+        concepto_texto = Paragraph(concepto_oficina, concepto_style)
+        elements.append(concepto_texto)
 
     # Construir PDF
     doc.build(elements)
@@ -855,6 +978,15 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             help="Plazo en meses para pagar el crédito"
         )
 
+    # Concepto de la Oficina
+    st.markdown("### 📝 Concepto de la Oficina")
+    concepto_oficina = st.text_area(
+        "Concepto del Analista / Director Operativo",
+        placeholder="Ingrese aquí su concepto sobre por qué SI o NO se debería otorgar el crédito al cliente...",
+        height=120,
+        help="Este concepto será incluido en el PDF de evaluación"
+    )
+
     # ========== BOTÓN DE EVALUACIÓN ==========
     st.markdown("---")
 
@@ -1182,16 +1314,49 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 'capacidad_disponible': capacidad_disponible
             }
 
-            # Generar PDF automáticamente
+            # Generar PDF automáticamente con consecutivo y verificación
             st.markdown("---")
             st.markdown("### 📄 Descargar Evaluación")
-            pdf_buffer = generar_pdf(cliente, datos_financieros, resultado_evaluacion)
+
+            # Obtener consecutivo único
+            consecutivo = obtener_siguiente_consecutivo()
+
+            # Generar PDF con consecutivo y concepto
+            pdf_buffer = generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo, concepto_oficina)
+
+            # Calcular hash del PDF para verificación
+            pdf_bytes = pdf_buffer.getvalue()
+            hash_pdf = calcular_hash_pdf(pdf_bytes)
+
+            # Guardar registro en base de datos
+            registro_guardado = guardar_registro_pdf(
+                consecutivo=consecutivo,
+                cedula=cliente['cedula'],
+                nombre_cliente=cliente['nombre'],
+                decision=resultado_evaluacion['decision'],
+                monto_solicitado=resultado_evaluacion['monto_solicitado'],
+                monto_aprobado=resultado_evaluacion['monto_aprobado'],
+                probabilidad=resultado_evaluacion['probabilidad'],
+                nivel_riesgo=resultado_evaluacion['nivel_riesgo'],
+                hash_pdf=hash_pdf,
+                concepto_oficina=concepto_oficina
+            )
+
+            # Mostrar información del consecutivo
+            if registro_guardado:
+                st.success(f"✅ PDF registrado con consecutivo: **{consecutivo}**")
+                with st.expander("🔒 Información de Verificación"):
+                    st.write(f"**Hash de verificación:** `{hash_pdf[:16]}...{hash_pdf[-16:]}`")
+                    st.info("Este hash único garantiza la autenticidad del documento. Cualquier modificación al PDF generará un hash diferente.")
+            else:
+                st.warning("⚠️ PDF generado pero no se pudo registrar en la base de datos.")
+
             fecha_nombre = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             st.download_button(
                 label="⬇️ Descargar PDF de la Evaluación",
                 data=pdf_buffer,
-                file_name=f"Evaluacion_Credito_{cliente['cedula']}_{fecha_nombre}.pdf",
+                file_name=f"Evaluacion_Credito_{cliente['cedula']}_{consecutivo.replace('-', '_')}_{fecha_nombre}.pdf",
                 mime="application/pdf",
                 type="primary",
                 use_container_width=True
