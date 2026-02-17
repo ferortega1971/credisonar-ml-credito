@@ -174,7 +174,7 @@ def buscar_cliente(cedula):
             c.calificacion
         FROM Cobranza_cartera c
         LEFT JOIN Cobranza_pagos3 p ON c.pagare = p.pagare_id
-        LEFT JOIN Cobranza_plan_cuotas pc ON c.pagare = pc.pagare
+        LEFT JOIN Cobranza_plan_cuotas pc ON c.pagare = pc.pagare_num_id
         WHERE c.cedula_id = '{cedula}'
         GROUP BY c.pagare, c.fecha_desembolso, c.valor_desembolsado, c.estado, c.calificacion
         ORDER BY c.fecha_desembolso DESC
