@@ -782,6 +782,9 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             if cliente['historial']['prestamos_en_juridica'] > 0:
                 st.error(f"🚨 ALERTA: {cliente['historial']['prestamos_en_juridica']} préstamo(s) en proceso jurídico")
 
+    else:
+        st.info("ℹ️ Cliente nuevo - Sin historial previo en Credisonar")
+
     # Historial de Evaluaciones PDF
     st.markdown("### 📄 Historial de Evaluaciones")
     df_pdfs = obtener_historial_pdfs_cliente(cliente['cedula'])
@@ -819,9 +822,6 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         )
     else:
         st.info("ℹ️ No hay evaluaciones previas registradas")
-
-    else:
-        st.info("ℹ️ Cliente nuevo - Sin historial previo en Credisonar")
 
 elif 'cliente' in st.session_state and st.session_state['cliente'] is None:
     # Cliente nuevo - pedir datos básicos
