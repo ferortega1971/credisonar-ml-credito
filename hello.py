@@ -165,15 +165,17 @@ def buscar_cliente(cedula):
         # Historial de préstamos (para mostrar tabla de historia)
         query_historial_prestamos = f"""
         SELECT
-            pagare,
-            fecha_desembolso,
-            fecha_ultimo_pago,
-            valor_desembolsado as monto_aprobado,
-            estado,
-            calificacion
-        FROM Cobranza_cartera
-        WHERE cedula_id = '{cedula}'
-        ORDER BY fecha_desembolso DESC
+            c.pagare,
+            c.fecha_desembolso,
+            MAX(p.fecha_pago) as fecha_ultimo_pago,
+            c.valor_desembolsado as monto_aprobado,
+            c.estado,
+            c.calificacion
+        FROM Cobranza_cartera c
+        LEFT JOIN Cobranza_pagos3 p ON c.pagare = p.pagare_id
+        WHERE c.cedula_id = '{cedula}'
+        GROUP BY c.pagare, c.fecha_desembolso, c.valor_desembolsado, c.estado, c.calificacion
+        ORDER BY c.fecha_desembolso DESC
         LIMIT 10
         """
         df_historial_prestamos = pd.read_sql(query_historial_prestamos, conn)
