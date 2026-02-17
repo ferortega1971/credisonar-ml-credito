@@ -328,6 +328,40 @@ def calcular_monto_sugerido(probabilidad, monto_solicitado, plazo, sueldo_mensua
 
     return max(0, int(monto_sugerido))
 
+def obtener_historial_pdfs_cliente(cedula):
+    """
+    Obtiene el historial de PDFs generados para un cliente
+    """
+    try:
+        conn = conectar_bd()
+
+        query = f"""
+        SELECT
+            consecutivo,
+            fecha_generacion,
+            decision,
+            monto_solicitado,
+            monto_aprobado,
+            score_datacredito,
+            ingresos_reportados,
+            egresos_reportados,
+            probabilidad,
+            nivel_riesgo
+        FROM Cobranza_pdf_evaluaciones
+        WHERE cedula = '{cedula}'
+        ORDER BY fecha_generacion DESC
+        LIMIT 10
+        """
+
+        df_pdfs = pd.read_sql(query, conn)
+        conn.close()
+
+        return df_pdfs
+
+    except Exception as e:
+        # Si la tabla no existe o hay error, retornar DataFrame vacío
+        return pd.DataFrame()
+
 def obtener_siguiente_consecutivo():
     """
     Obtiene el siguiente número de consecutivo para el PDF
@@ -380,7 +414,8 @@ def calcular_hash_pdf(pdf_bytes):
     return hashlib.sha256(pdf_bytes).hexdigest()
 
 def guardar_registro_pdf(consecutivo, cedula, nombre_cliente, decision, monto_solicitado,
-                         monto_aprobado, probabilidad, nivel_riesgo, hash_pdf, concepto_oficina=""):
+                         monto_aprobado, probabilidad, nivel_riesgo, hash_pdf, concepto_oficina="",
+                         score_datacredito=0, ingresos_reportados=0, egresos_reportados=0):
     """
     Guarda el registro del PDF generado en la base de datos
     """
@@ -391,8 +426,9 @@ def guardar_registro_pdf(consecutivo, cedula, nombre_cliente, decision, monto_so
         query = """
         INSERT INTO Cobranza_pdf_evaluaciones
         (consecutivo, cedula, nombre_cliente, fecha_generacion, decision,
-         monto_solicitado, monto_aprobado, probabilidad, nivel_riesgo, concepto_oficina, hash_pdf)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+         monto_solicitado, monto_aprobado, probabilidad, nivel_riesgo,
+         score_datacredito, ingresos_reportados, egresos_reportados, concepto_oficina, hash_pdf)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         valores = (
@@ -405,6 +441,9 @@ def guardar_registro_pdf(consecutivo, cedula, nombre_cliente, decision, monto_so
             monto_aprobado,
             probabilidad,
             nivel_riesgo,
+            score_datacredito,
+            ingresos_reportados,
+            egresos_reportados,
             concepto_oficina if concepto_oficina else None,
             hash_pdf
         )
@@ -742,6 +781,45 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 st.error(f"🚨 ALERTA: {cliente['historial']['prestamos_calificacion_E']} préstamo(s) en calificación E")
             if cliente['historial']['prestamos_en_juridica'] > 0:
                 st.error(f"🚨 ALERTA: {cliente['historial']['prestamos_en_juridica']} préstamo(s) en proceso jurídico")
+
+    # Historial de Evaluaciones PDF
+    st.markdown("### 📄 Historial de Evaluaciones")
+    df_pdfs = obtener_historial_pdfs_cliente(cliente['cedula'])
+
+    if len(df_pdfs) > 0:
+        # Formatear datos para mostrar
+        df_pdfs_display = df_pdfs.copy()
+
+        # Formatear fechas
+        df_pdfs_display['fecha_generacion'] = pd.to_datetime(df_pdfs_display['fecha_generacion']).dt.strftime('%d/%m/%Y %H:%M')
+
+        # Formatear montos
+        df_pdfs_display['monto_solicitado'] = df_pdfs_display['monto_solicitado'].apply(lambda x: f"${x:,.0f}")
+        df_pdfs_display['monto_aprobado'] = df_pdfs_display['monto_aprobado'].apply(lambda x: f"${x:,.0f}")
+        df_pdfs_display['ingresos_reportados'] = df_pdfs_display['ingresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
+        df_pdfs_display['egresos_reportados'] = df_pdfs_display['egresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
+
+        # Renombrar columnas
+        df_pdfs_display = df_pdfs_display.rename(columns={
+            'consecutivo': 'Consecutivo',
+            'fecha_generacion': 'Fecha',
+            'decision': 'Resultado',
+            'monto_solicitado': 'Monto Solicitado',
+            'monto_aprobado': 'Monto Aprobado',
+            'score_datacredito': 'Score DC',
+            'ingresos_reportados': 'Ingresos',
+            'egresos_reportados': 'Egresos'
+        })
+
+        # Mostrar tabla
+        st.dataframe(
+            df_pdfs_display[['Consecutivo', 'Fecha', 'Resultado', 'Monto Solicitado', 'Monto Aprobado', 'Score DC', 'Ingresos', 'Egresos']],
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("ℹ️ No hay evaluaciones previas registradas")
+
     else:
         st.info("ℹ️ Cliente nuevo - Sin historial previo en Credisonar")
 
@@ -1339,7 +1417,10 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 probabilidad=resultado_evaluacion['probabilidad'],
                 nivel_riesgo=resultado_evaluacion['nivel_riesgo'],
                 hash_pdf=hash_pdf,
-                concepto_oficina=concepto_oficina
+                concepto_oficina=concepto_oficina,
+                score_datacredito=score_datacredito,
+                ingresos_reportados=sueldo_mensual,
+                egresos_reportados=total_egresos_completo
             )
 
             # Mostrar información del consecutivo
