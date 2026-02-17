@@ -19,6 +19,11 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
+# Función de utilidad para formatear números con punto como separador de miles
+def fmt(numero):
+    """Formatea número con punto (.) como separador de miles - Formato colombiano"""
+    return f"{numero:_.0f}".replace("_", ".")
+
 # Configuración de rutas (relativas para Streamlit Cloud)
 BASE_DIR = Path(__file__).parent
 MODEL_FILE = BASE_DIR / "models" / "best_model_v2.pkl"
@@ -524,16 +529,16 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
     elements.append(Paragraph("INFORMACIÓN FINANCIERA", styles['Heading2']))
     financiera_data = [
         ['Concepto', 'Valor'],
-        ['Ingresos Mensuales', f"${datos_financieros['ingresos']:,.0f}"],
-        ['Arriendo', f"${datos_financieros['arriendo']:,.0f}"],
-        ['Servicios', f"${datos_financieros['servicios']:,.0f}"],
-        ['Préstamos Personales', f"${datos_financieros['prestamos_personales']:,.0f}"],
+        ['Ingresos Mensuales', f"${fmt(datos_financieros['ingresos'])}"],
+        ['Arriendo', f"${fmt(datos_financieros['arriendo'])}"],
+        ['Servicios', f"${fmt(datos_financieros['servicios'])}"],
+        ['Préstamos Personales', f"${fmt(datos_financieros['prestamos_personales'])}"],
         ['Score Datacrédito', f"{datos_financieros['score_datacredito']}"],
-        ['Deudas Datacrédito', f"${datos_financieros['total_deudas_datacredito']:,.0f}"],
-        ['Cuota Datacrédito', f"${datos_financieros['cuota_datacredito']:,.0f}"],
-        ['Cuota Credisonar', f"${datos_financieros['cuota_credisonar']:,.0f}"],
-        ['Total Egresos', f"${datos_financieros['total_egresos']:,.0f}"],
-        ['Capacidad Disponible', f"${datos_financieros['capacidad_disponible']:,.0f}"]
+        ['Deudas Datacrédito', f"${fmt(datos_financieros['total_deudas_datacredito'])}"],
+        ['Cuota Datacrédito', f"${fmt(datos_financieros['cuota_datacredito'])}"],
+        ['Cuota Credisonar', f"${fmt(datos_financieros['cuota_credisonar'])}"],
+        ['Total Egresos', f"${fmt(datos_financieros['total_egresos'])}"],
+        ['Capacidad Disponible', f"${fmt(datos_financieros['capacidad_disponible'])}"]
     ]
     financiera_table = Table(financiera_data, colWidths=[3*inch, 3*inch])
     financiera_table.setStyle(TableStyle([
@@ -555,10 +560,10 @@ def generar_pdf(cliente, datos_financieros, resultado_evaluacion, consecutivo=""
     decision_data = [
         ['Decisión:', resultado_evaluacion['decision']],
         ['Probabilidad Buen Pagador:', f"{resultado_evaluacion['probabilidad']}%"],
-        ['Monto Solicitado:', f"${resultado_evaluacion['monto_solicitado']:,.0f}"],
-        ['Monto Aprobado:', f"${resultado_evaluacion['monto_aprobado']:,.0f}"],
+        ['Monto Solicitado:', f"${fmt(resultado_evaluacion['monto_solicitado'])}"],
+        ['Monto Aprobado:', f"${fmt(resultado_evaluacion['monto_aprobado'])}"],
         ['Plazo:', f"{resultado_evaluacion['plazo']} meses"],
-        ['Cuota Mensual:', f"${resultado_evaluacion['cuota_mensual']:,.0f}"],
+        ['Cuota Mensual:', f"${fmt(resultado_evaluacion['cuota_mensual'])}"],
         ['Nivel de Riesgo:', resultado_evaluacion['nivel_riesgo']]
     ]
     decision_table = Table(decision_data, colWidths=[3*inch, 3*inch])
@@ -741,8 +746,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         df_display['fecha_desembolso'] = pd.to_datetime(df_display['fecha_desembolso']).dt.strftime('%d/%m/%Y')
         df_display['fecha_ultimo_pago'] = pd.to_datetime(df_display['fecha_ultimo_pago'], errors='coerce').dt.strftime('%d/%m/%Y')
         df_display['fecha_ultimo_pago'] = df_display['fecha_ultimo_pago'].fillna('N/A')
-        df_display['monto_aprobado'] = df_display['monto_aprobado'].apply(lambda x: f"${x:,.0f}")
-        df_display['valor_cuota'] = df_display['valor_cuota'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "$0")
+        df_display['monto_aprobado'] = df_display['monto_aprobado'].apply(lambda x: f"${fmt(x)}")
+        df_display['valor_cuota'] = df_display['valor_cuota'].apply(lambda x: f"${fmt(x)}" if pd.notna(x) else "$0")
 
         # Renombrar columnas para mostrar
         df_display = df_display.rename(columns={
@@ -797,10 +802,10 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         df_pdfs_display['fecha_generacion'] = pd.to_datetime(df_pdfs_display['fecha_generacion']).dt.strftime('%d/%m/%Y %H:%M')
 
         # Formatear montos
-        df_pdfs_display['monto_solicitado'] = df_pdfs_display['monto_solicitado'].apply(lambda x: f"${x:,.0f}")
-        df_pdfs_display['monto_aprobado'] = df_pdfs_display['monto_aprobado'].apply(lambda x: f"${x:,.0f}")
-        df_pdfs_display['ingresos_reportados'] = df_pdfs_display['ingresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
-        df_pdfs_display['egresos_reportados'] = df_pdfs_display['egresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
+        df_pdfs_display['monto_solicitado'] = df_pdfs_display['monto_solicitado'].apply(lambda x: f"${fmt(x)}")
+        df_pdfs_display['monto_aprobado'] = df_pdfs_display['monto_aprobado'].apply(lambda x: f"${fmt(x)}")
+        df_pdfs_display['ingresos_reportados'] = df_pdfs_display['ingresos_reportados'].apply(lambda x: f"${fmt(x)}" if pd.notna(x) else "N/A")
+        df_pdfs_display['egresos_reportados'] = df_pdfs_display['egresos_reportados'].apply(lambda x: f"${fmt(x)}" if pd.notna(x) else "N/A")
 
         # Renombrar columnas
         df_pdfs_display = df_pdfs_display.rename(columns={
@@ -1001,7 +1006,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         st.metric("Créditos Vigentes", creditos_activos.get('creditos_vigentes', 0))
 
     with col_c2:
-        st.metric("Saldo Capital", f"${creditos_activos.get('saldo_capital', 0):,.0f}")
+        st.metric("Saldo Capital", f"${fmt(creditos_activos.get('saldo_capital', 0))}")
 
     with col_c3:
         calificaciones = creditos_activos.get('calificaciones', 'N/A')
@@ -1010,11 +1015,11 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         st.metric("Calificación", calificaciones)
 
     with col_c4:
-        st.metric("Monto Aprobado", f"${creditos_activos.get('monto_aprobado', 0):,.0f}")
+        st.metric("Monto Aprobado", f"${fmt(creditos_activos.get('monto_aprobado', 0))}")
 
     with col_c5:
         cuota_mensual_credisonar = creditos_activos.get('cuota_mensual', 0)
-        st.metric("Cuota Mensual", f"${cuota_mensual_credisonar:,.0f}")
+        st.metric("Cuota Mensual", f"${fmt(cuota_mensual_credisonar)}")
 
     # Resumen
     total_egresos = arriendo + servicios + prestamos_personales
@@ -1025,16 +1030,16 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     col_s1, col_s2, col_s3 = st.columns(3)
 
     with col_s1:
-        st.metric("Total Ingresos", f"${sueldo_mensual:,.0f}")
+        st.metric("Total Ingresos", f"${fmt(sueldo_mensual)}")
 
     with col_s2:
-        st.metric("Total Egresos", f"${total_egresos_completo:,.0f}")
+        st.metric("Total Egresos", f"${fmt(total_egresos_completo)}")
 
     with col_s3:
         capacidad_disponible = sueldo_mensual - total_egresos_completo
         st.metric(
             "Capacidad Disponible",
-            f"${capacidad_disponible:,.0f}",
+            f"${fmt(capacidad_disponible)}",
             delta="Positiva" if capacidad_disponible > 0 else "Negativa",
             delta_color="normal" if capacidad_disponible > 0 else "inverse"
         )
@@ -1050,7 +1055,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             "Monto Solicitado *",
             min_value=500000,
             max_value=50000000,
-            value=3000000,
+            value=500000,
             step=100000,
             help="Monto que el cliente está solicitando",
             key=f"monto_{cliente['cedula']}"
@@ -1060,7 +1065,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         plazo = st.selectbox(
             "Plazo (meses) *",
             [6, 12, 18, 24, 36],
-            index=2,
+            index=1,
             help="Plazo en meses para pagar el crédito",
             key=f"plazo_{cliente['cedula']}"
         )
@@ -1216,7 +1221,7 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             with col_r3:
                 st.metric(
                     "Monto Aprobado",
-                    f"${monto_sugerido:,.0f}",
+                    f"${fmt(monto_sugerido)}",
                     delta=f"{(monto_sugerido/monto_solicitado*100):.0f}% de lo solicitado" if monto_solicitado > 0 else ""
                 )
 
@@ -1230,10 +1235,10 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             col_q1, col_q2, col_q3, col_q4 = st.columns(4)
 
             with col_q1:
-                st.metric("Cuota Propuesta", f"${cuota_sugerido:,.0f}/mes")
+                st.metric("Cuota Propuesta", f"${fmt(cuota_sugerido)}/mes")
 
             with col_q2:
-                st.metric("Capacidad de Pago", f"${capacidad:,.0f}/mes")
+                st.metric("Capacidad de Pago", f"${fmt(capacidad)}/mes")
 
             with col_q3:
                 # Determinar color según ratio
@@ -1282,9 +1287,9 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                 **Análisis Financiero:**
                 - Score Datacrédito: {score_datacredito} {"✅" if score_datacredito >= 700 else "⚠️" if score_datacredito >= 500 else "❌"}
                 - Ratio deuda/ingreso: {ratio_deuda_ingreso:.1f}% {"✅" if ratio_deuda_ingreso <= 35 else "⚠️" if ratio_deuda_ingreso <= 50 else "❌"}
-                - Ingreso mensual: ${sueldo_mensual:,.0f}
-                - Deuda total mensual: ${deuda_total_mensual:,.0f}
-                - Capacidad disponible: ${capacidad:,.0f}
+                - Ingreso mensual: ${fmt(sueldo_mensual)}
+                - Deuda total mensual: ${fmt(deuda_total_mensual)}
+                - Capacidad disponible: ${fmt(capacidad)}
 
                 **🚨 APROBAR este crédito violaría las buenas prácticas financieras y llevaría al cliente a sobreendeudamiento.**
 
@@ -1300,9 +1305,9 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
 
                 **✅ Cliente IDEAL según estándares Colombia:**
 
-                - **Monto aprobado:** ${monto_sugerido:,.0f}
+                - **Monto aprobado:** ${fmt(monto_sugerido)}
                 - **Plazo:** {plazo} meses
-                - **Cuota mensual:** ${cuota_sugerido:,.0f}
+                - **Cuota mensual:** ${fmt(cuota_sugerido)}
                 - **Score Datacrédito:** {score_datacredito} (Excelente ≥700)
                 - **Ratio deuda/ingreso:** {ratio_deuda_ingreso:.1f}% (Ideal ≤35%)
                 - **Probabilidad ML:** {probabilidad*100:.1f}%
@@ -1321,9 +1326,9 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
 
                 **⚠️ Cliente en zona de precaución:**
 
-                - **Monto aprobado:** ${monto_sugerido:,.0f}
+                - **Monto aprobado:** ${fmt(monto_sugerido)}
                 - **Plazo:** {plazo} meses
-                - **Cuota mensual:** ${cuota_sugerido:,.0f}
+                - **Cuota mensual:** ${fmt(cuota_sugerido)}
                 - **Score Datacrédito:** {score_datacredito} {"(Bueno 700-799)" if score_datacredito >= 700 else "(Promedio 500-699)"}
                 - **Ratio deuda/ingreso:** {ratio_deuda_ingreso:.1f}% {"(Límite 36-40%)" if ratio_deuda_ingreso > 35 else "(Aceptable <35%)"}
                 - **Probabilidad ML:** {probabilidad*100:.1f}%
@@ -1360,17 +1365,17 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
 
                 with col_d1:
                     st.markdown("**💰 Capacidad Financiera:**")
-                    st.write(f"- Ingreso mensual: ${sueldo_mensual:,.0f}")
-                    st.write(f"- Egresos fijos: ${total_egresos:,.0f}")
-                    st.write(f"- Deudas Datacrédito: ${valor_mensual_datacredito:,.0f}")
-                    st.write(f"- **Disponible: ${capacidad:,.0f}**")
+                    st.write(f"- Ingreso mensual: ${fmt(sueldo_mensual)}")
+                    st.write(f"- Egresos fijos: ${fmt(total_egresos)}")
+                    st.write(f"- Deudas Datacrédito: ${fmt(valor_mensual_datacredito)}")
+                    st.write(f"- **Disponible: ${fmt(capacidad)}**")
                     st.write(f"- Ratio deuda/ingreso: {(total_egresos+valor_mensual_datacredito)/sueldo_mensual*100:.1f}%")
 
                 with col_d2:
                     st.markdown("**📊 Información Datacrédito:**")
                     st.write(f"- Score actual: {score_datacredito}")
-                    st.write(f"- Total deudas: ${total_deudas_datacredito:,.0f}")
-                    st.write(f"- Cuota mensual: ${valor_mensual_datacredito:,.0f}")
+                    st.write(f"- Total deudas: ${fmt(total_deudas_datacredito)}")
+                    st.write(f"- Cuota mensual: ${fmt(valor_mensual_datacredito)}")
 
                     if cliente['historial']['num_prestamos_historicos'] > 0:
                         st.markdown("**📜 Historial Credisonar:**")
@@ -1453,10 +1458,10 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
                     df_pdfs_display_act['fecha_generacion'] = pd.to_datetime(df_pdfs_display_act['fecha_generacion']).dt.strftime('%d/%m/%Y %H:%M')
 
                     # Formatear montos
-                    df_pdfs_display_act['monto_solicitado'] = df_pdfs_display_act['monto_solicitado'].apply(lambda x: f"${x:,.0f}")
-                    df_pdfs_display_act['monto_aprobado'] = df_pdfs_display_act['monto_aprobado'].apply(lambda x: f"${x:,.0f}")
-                    df_pdfs_display_act['ingresos_reportados'] = df_pdfs_display_act['ingresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
-                    df_pdfs_display_act['egresos_reportados'] = df_pdfs_display_act['egresos_reportados'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A")
+                    df_pdfs_display_act['monto_solicitado'] = df_pdfs_display_act['monto_solicitado'].apply(lambda x: f"${fmt(x)}")
+                    df_pdfs_display_act['monto_aprobado'] = df_pdfs_display_act['monto_aprobado'].apply(lambda x: f"${fmt(x)}")
+                    df_pdfs_display_act['ingresos_reportados'] = df_pdfs_display_act['ingresos_reportados'].apply(lambda x: f"${fmt(x)}" if pd.notna(x) else "N/A")
+                    df_pdfs_display_act['egresos_reportados'] = df_pdfs_display_act['egresos_reportados'].apply(lambda x: f"${fmt(x)}" if pd.notna(x) else "N/A")
 
                     # Renombrar columnas
                     df_pdfs_display_act = df_pdfs_display_act.rename(columns={
