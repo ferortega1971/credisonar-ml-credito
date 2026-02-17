@@ -904,7 +904,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         max_value=100000000,
         value=0,
         step=100000,
-        help="Ingreso mensual total demostrable del cliente"
+        help="Ingreso mensual total demostrable del cliente",
+        key=f"sueldo_{cliente['cedula']}"
     )
 
     # Egresos
@@ -918,7 +919,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             max_value=50000000,
             value=0,
             step=50000,
-            help="Valor mensual del arriendo"
+            help="Valor mensual del arriendo",
+            key=f"arriendo_{cliente['cedula']}"
         )
 
     with col_e2:
@@ -928,7 +930,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             max_value=10000000,
             value=0,
             step=50000,
-            help="Valor mensual de servicios públicos"
+            help="Valor mensual de servicios públicos",
+            key=f"servicios_{cliente['cedula']}"
         )
 
     with col_e3:
@@ -938,7 +941,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             max_value=50000000,
             value=0,
             step=50000,
-            help="Cuota mensual de préstamos personales (sin Datacrédito)"
+            help="Cuota mensual de préstamos personales (sin Datacrédito)",
+            key=f"prestamos_{cliente['cedula']}"
         )
 
     # Datacrédito
@@ -951,7 +955,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             min_value=0,
             max_value=950,
             value=0,
-            help="Score actual reportado en Datacrédito"
+            help="Score actual reportado en Datacrédito",
+            key=f"score_dc_{cliente['cedula']}"
         )
 
     with col_d2:
@@ -961,7 +966,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             max_value=500000000,
             value=0,
             step=100000,
-            help="Suma total de deudas vigentes reportadas en Datacrédito"
+            help="Suma total de deudas vigentes reportadas en Datacrédito",
+            key=f"deudas_dc_{cliente['cedula']}"
         )
 
     with col_d3:
@@ -971,7 +977,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             max_value=50000000,
             value=0,
             step=50000,
-            help="Cuota mensual total reportada en Datacrédito"
+            help="Cuota mensual total reportada en Datacrédito",
+            key=f"cuota_dc_{cliente['cedula']}"
         )
 
     # Credisonar - Datos automáticos de la BD
@@ -1045,7 +1052,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             max_value=50000000,
             value=3000000,
             step=100000,
-            help="Monto que el cliente está solicitando"
+            help="Monto que el cliente está solicitando",
+            key=f"monto_{cliente['cedula']}"
         )
 
     with col_c2:
@@ -1053,7 +1061,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
             "Plazo (meses) *",
             [6, 12, 18, 24, 36, 48],
             index=2,
-            help="Plazo en meses para pagar el crédito"
+            help="Plazo en meses para pagar el crédito",
+            key=f"plazo_{cliente['cedula']}"
         )
 
     # Concepto de la Oficina
@@ -1062,7 +1071,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
         "Concepto del Analista / Director Operativo",
         placeholder="Ingrese aquí su concepto sobre por qué SI o NO se debería otorgar el crédito al cliente...",
         height=120,
-        help="Este concepto será incluido en el PDF de evaluación"
+        help="Este concepto será incluido en el PDF de evaluación",
+        key=f"concepto_{cliente['cedula']}"
     )
 
     # ========== BOTÓN DE EVALUACIÓN ==========
