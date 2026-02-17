@@ -676,7 +676,7 @@ with col_logo:
     if LOGO_FILE.exists():
         st.image(str(LOGO_FILE), width=100)
 with col_title:
-    st.title("💰 Sistema de Decisión de Crédito - Credisonar")
+    st.title("Sistema de Decisión de Crédito - Credisonar")
     st.markdown("**Evaluación inteligente con Machine Learning**")
 
 # Cargar modelo
