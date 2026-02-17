@@ -73,9 +73,6 @@ def buscar_cliente(cedula):
             conn.close()
             return None
 
-        # Debug: mostrar primeras filas
-        st.write("DEBUG - Datos del cliente:", df_cliente.head())
-
         # Calcular edad
         fecha_nac = pd.to_datetime(df_cliente['fecha_nacimiento'].iloc[0], errors='coerce')
         if pd.isna(fecha_nac):
@@ -130,7 +127,7 @@ def buscar_cliente(cedula):
 
         # Última asesoría (para obtener contacto y vivienda)
         query_asesoria = f"""
-        SELECT vivienda_propia, tel_celular, direccion_of
+        SELECT vivienda_propia, tel_celular, direccion_of, fecha_asesoria, correo
         FROM Cobranza_asesorias
         WHERE cedula_id = '{cedula}'
         ORDER BY fecha_asesoria DESC
@@ -138,12 +135,17 @@ def buscar_cliente(cedula):
         """
         df_asesoria = pd.read_sql(query_asesoria, conn)
 
-        # Obtener teléfono y dirección de asesoría si existe, sino dejar vacío
+        # Obtener teléfono, dirección, correo y fecha de asesoría si existe
         telefono = ''
         direccion = ''
+        correo = ''
+        fecha_ultima_asesoria = None
         if len(df_asesoria) > 0:
             telefono = df_asesoria['tel_celular'].iloc[0] if pd.notna(df_asesoria['tel_celular'].iloc[0]) else ''
             direccion = df_asesoria['direccion_of'].iloc[0] if pd.notna(df_asesoria['direccion_of'].iloc[0]) else ''
+            correo = df_asesoria['correo'].iloc[0] if pd.notna(df_asesoria['correo'].iloc[0]) else ''
+            if pd.notna(df_asesoria['fecha_asesoria'].iloc[0]):
+                fecha_ultima_asesoria = pd.to_datetime(df_asesoria['fecha_asesoria'].iloc[0])
 
         # Créditos activos en Credisonar (estado = 'A')
         query_activos = f"""
@@ -158,6 +160,22 @@ def buscar_cliente(cedula):
         WHERE cedula_id = '{cedula}' AND estado = 'A'
         """
         df_activos = pd.read_sql(query_activos, conn)
+
+        # Historial de préstamos (para mostrar tabla de historia)
+        query_historial_prestamos = f"""
+        SELECT
+            pagare,
+            fecha_desembolso,
+            fecha_ultimo_pago,
+            valor_desembolsado as monto_aprobado,
+            estado,
+            calificacion
+        FROM Cobranza_cartera
+        WHERE cedula_id = '{cedula}'
+        ORDER BY fecha_desembolso DESC
+        LIMIT 10
+        """
+        df_historial_prestamos = pd.read_sql(query_historial_prestamos, conn)
 
         conn.close()
 
@@ -176,13 +194,17 @@ def buscar_cliente(cedula):
             'cedula': cedula,
             'nombre': nombre,
             'telefono': telefono,
+            'correo': correo,
             'direccion': direccion,
+            'fecha_nacimiento': fecha_nac,
+            'fecha_ultima_asesoria': fecha_ultima_asesoria,
             'edad': edad,
             'sexo': sexo,
             'sexo_texto': df_cliente['sexo'].iloc[0],
             'estado_civil': estado_civil,
             'estado_civil_texto': df_cliente['estado_civil'].iloc[0],
             'creditos_activos': creditos_activos,
+            'historial_prestamos': df_historial_prestamos,
         }
 
         # Historial de créditos
@@ -483,7 +505,7 @@ st.markdown("---")
 # ========== SECCIÓN 1: DATOS DEL CLIENTE ==========
 st.header("👤 1. Datos del Cliente")
 
-col1, col2 = st.columns([4, 1])
+col1, col2, col3 = st.columns([3, 1, 1])
 
 with col1:
     cedula = st.text_input("Cédula *", placeholder="Ingrese el número de cédula", key="cedula_input")
@@ -491,6 +513,14 @@ with col1:
 with col2:
     st.write("")  # Spacer for alignment
     buscar_btn = st.button("🔍 Buscar", type="primary")
+
+with col3:
+    st.write("")  # Spacer for alignment
+    if st.button("🔄 Nueva Consulta", type="secondary"):
+        # Limpiar todos los datos de la sesión
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
 if buscar_btn and cedula:
     with st.spinner("Buscando cliente..."):
@@ -512,15 +542,53 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     with col_a:
         st.text_input("Nombre Completo", value=cliente['nombre'], disabled=True)
     with col_b:
-        st.text_input("Teléfono", value=cliente['telefono'], disabled=True)
-    with col_c:
         st.text_input("Cédula", value=cliente['cedula'], disabled=True)
+    with col_c:
+        fecha_nac_str = cliente['fecha_nacimiento'].strftime('%d/%m/%Y') if pd.notna(cliente['fecha_nacimiento']) else 'N/A'
+        st.text_input("Fecha de Nacimiento", value=fecha_nac_str, disabled=True)
+
+    col_d, col_e, col_f = st.columns(3)
+
+    with col_d:
+        st.text_input("Teléfono", value=cliente['telefono'], disabled=True)
+    with col_e:
+        st.text_input("Correo", value=cliente['correo'], disabled=True)
+    with col_f:
+        fecha_update_str = cliente['fecha_ultima_asesoria'].strftime('%d/%m/%Y') if cliente['fecha_ultima_asesoria'] and pd.notna(cliente['fecha_ultima_asesoria']) else 'N/A'
+        st.text_input("Fecha de Update", value=fecha_update_str, disabled=True)
 
     st.text_input("Dirección", value=cliente['direccion'], disabled=True)
 
-    # Mostrar historial si existe
-    if cliente['historial']['num_prestamos_historicos'] > 0:
-        with st.expander("📊 Ver Historial en Credisonar"):
+    # Historia en Credisonar
+    st.markdown("### 📚 Historia en Credisonar")
+
+    if len(cliente['historial_prestamos']) > 0:
+        # Formatear datos para mostrar
+        df_display = cliente['historial_prestamos'].copy()
+        df_display['fecha_desembolso'] = pd.to_datetime(df_display['fecha_desembolso']).dt.strftime('%d/%m/%Y')
+        df_display['fecha_ultimo_pago'] = pd.to_datetime(df_display['fecha_ultimo_pago'], errors='coerce').dt.strftime('%d/%m/%Y')
+        df_display['fecha_ultimo_pago'] = df_display['fecha_ultimo_pago'].fillna('N/A')
+        df_display['monto_aprobado'] = df_display['monto_aprobado'].apply(lambda x: f"${x:,.0f}")
+
+        # Renombrar columnas para mostrar
+        df_display = df_display.rename(columns={
+            'pagare': 'Pagaré',
+            'fecha_desembolso': 'Fecha Desembolso',
+            'fecha_ultimo_pago': 'Último Pago',
+            'monto_aprobado': 'Monto Aprobado',
+            'estado': 'Estado',
+            'calificacion': 'Calificación'
+        })
+
+        # Mostrar tabla
+        st.dataframe(
+            df_display[['Pagaré', 'Fecha Desembolso', 'Último Pago', 'Monto Aprobado', 'Estado', 'Calificación']],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        # Mostrar resumen de historial
+        if cliente['historial']['num_prestamos_historicos'] > 0:
             col_h1, col_h2, col_h3, col_h4 = st.columns(4)
             with col_h1:
                 st.metric("Préstamos Totales", cliente['historial']['num_prestamos_historicos'])
