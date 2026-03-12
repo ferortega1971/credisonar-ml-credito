@@ -448,8 +448,8 @@ if 'cliente' in st.session_state and st.session_state['cliente']:
     with col_c2:
         plazo = st.selectbox(
             "Plazo (meses) *",
-            [6, 12, 18, 24, 36],
-            index=2,
+            list(range(6, 38, 2)),
+            index=0,
             help="Plazo en meses para pagar el crédito"
         )
 
